@@ -3,7 +3,6 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 
 export default [
-  // ESM Build
   {
     input: 'src/index.ts',
     output: {
