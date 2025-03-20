@@ -38,7 +38,7 @@ jobs:
         run: npx commitlint --from=${{ env.COMMIT_RANGE }} --to=HEAD || true
 
       - name: Run linter
-        run: npm run lint
+        run: npm run lint -- --fix
 
       - name: Run tests with coverage
         run: npm run coverage
