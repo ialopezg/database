@@ -1,6 +1,6 @@
 {
   "name": "@ialopezg/db",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Database Management with ORM and CLI utilities",
   "main": "./dist/index.cjs.js",
   "module": "./dist/index.esm.js",
@@ -26,7 +26,11 @@
     "lint:fix": "npm run lint -- --fix",
     "test": "mocha --require tsx 'src/**/*.{spec,test}.ts' --reporter spec",
     "coverage": "c8 npm test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "release": "standard-version",
+    "release:major": "standard-version --release-as major",
+    "release:minor": "standard-version --release-as minor",
+    "release:patch": "standard-version --release-as patch"
   },
   "keywords": [],
   "author": "Isidro Lopez",
@@ -60,6 +64,7 @@
     "rollup": "^4.36.0",
     "sinon": "^19.0.4",
     "sinon-chai": "^4.0.0",
+    "standard-version": "^9.5.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
