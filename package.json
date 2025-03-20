@@ -2,7 +2,16 @@
   "name": "@ialopezg/db",
   "version": "1.0.0",
   "description": "Database Management with ORM and CLI utilities",
-  "main": "dist/index.js",
+  "main": "./dist/index.cjs.js",
+  "module": "./dist/index.esm.js",
+  "browser": "./dist/index.umd.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "import": "./dist/index.esm.js",
+    "require": "./dist/index.cjs.js",
+    "browser": "./dist/index.umd.js",
+    "types": "./dist/index.d.ts"
+  },
   "type": "module",
   "scripts": {
     "clean": "rimraf dist",
