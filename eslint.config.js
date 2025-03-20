@@ -9,7 +9,7 @@ import ts from 'typescript-eslint';
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   {
-    ignores: ['coverage', 'node_modules', 'dist', 'src/**/*.{spec,test}.ts', 'rollup.config.js'],
+    ignores: ['coverage', 'node_modules', 'dist', 'src/test/**/*.ts', 'rollup.config.js'],
   },
   { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
   js.configs.recommended,
@@ -22,6 +22,7 @@ export default [
       'simple-import-sort': simpleImportSort,
     },
     rules: {
+      '@typescript-eslint/no-unsafe-function-type': 'off',
       'n/no-extraneous-import': [
         'error',
         {
