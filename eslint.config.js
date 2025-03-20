@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import eslintConfigPrettier from 'eslint-config-prettier';
+import jest from 'eslint-plugin-jest';
 import nodeRecommended from 'eslint-plugin-n/configs/recommended-module.js';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
@@ -14,6 +15,7 @@ export default [
   { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
   js.configs.recommended,
   nodeRecommended,
+  jest.configs['flat/recommended'],
   eslintConfigPrettier,
   eslintPluginPrettierRecommended,
   ...ts.configs.recommended,
