@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint commits
+        run: npx commitlint --from=HEAD~10 --to=HEAD
+
       - name: Run linter
         run: npm run lint
 
