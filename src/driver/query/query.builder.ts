@@ -31,10 +31,32 @@ export class QueryBuilder {
    * const query = new QueryBuilder().select("id");
    * const query = new QueryBuilder().select(["id", "name"]);
    */
-  select(columns: string[] | string): this {
+  select(...columns: string[]): this {
     this.queryType = 'select';
 
     this.columns = Array.isArray(columns) ? [...columns] : [columns];
+
+    return this;
+  }
+
+  /**
+   * Adds additional columns to the selection while ensuring no duplicates.
+   *
+   * @param {...string[]} columns - The columns to be added to the selection.
+   * @returns {this} The current QueryBuilder instance for method chaining.
+   *
+   * @example
+   * const query = new QueryBuilder().select('id').from('users').addColumns('name', 'email');
+   * console.log(query.getQuery()); // SELECT id, name, email FROM users
+   *
+   * @example
+   * const query = new QueryBuilder().select('id').from('users').addColumns('id');
+   * console.log(query.getQuery()); // SELECT id FROM users (avoiding duplicates)
+   */
+  addColumns(...columns: string[]): this {
+    this.columns = this.columns
+      .concat(columns)
+      .filter((value, index, self) => self.indexOf(value) === index);
 
     return this;
   }
@@ -66,6 +88,10 @@ export class QueryBuilder {
    * const query = new QueryBuilder().select("id").from("users", "u").where("u.id = 1");
    */
   where(condition: string): this {
+    if (!condition.trim()) {
+      return this;
+    }
+
     this.conditions.push({ type: 'simple', condition });
 
     return this;
