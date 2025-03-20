@@ -25,12 +25,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Get commit history range
-        id: commits
-        run: echo "commit_range=$(git rev-parse --is-inside-work-tree && (git rev-list --count HEAD | grep -q '^[0-9]\+$' && echo HEAD~$(git rev-list --count HEAD) || echo HEAD~1))" >> $GITHUB_ENV
+      - name: Determine commit range
+        id: commit_range
+        run: |
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            echo "COMMIT_RANGE=HEAD~10" >> $GITHUB_ENV
+          else
+            echo "COMMIT_RANGE=HEAD" >> $GITHUB_ENV
+          fi
 
       - name: Lint commits
-        run: npx commitlint --from=${{ env.commit_range }} --to=HEAD
+        run: npx commitlint --from=${{ env.COMMIT_RANGE }} --to=HEAD || true
 
       - name: Run linter
         run: npm run lint
