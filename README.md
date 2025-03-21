@@ -8,130 +8,196 @@ This library provides a simple and flexible query builder for generating SQL que
 It supports multiple join types and includes support for `INNER`, `LEFT`, `RIGHT`,
 `CROSS`, and `NATURAL` joins, as well as condition types like `ON` and `USING`.
 
----
+## QueryBuilder
+
+A simple and flexible SQL query builder for constructing `SELECT`, `INSERT`, `UPDATE`, and `DELETE` queries.
+It supports joins, conditions, sorting, limits, and offsets, allowing you to easily build and customize SQL queries in a
+clean and intuitive manner.
 
 ## 🚀 Features
 
-- **✅ Flexible Query Building**: Supports various SQL clauses including `SELECT`, `WHERE`, `ORDER BY`, and joins.
-- **✅ Multiple Join Types**: `INNER`, `LEFT`, `RIGHT`, `CROSS` joins with conditions (`ON` and `USING`).
-- **✅ Dynamic Column Selection**: Add or update selected columns dynamically.
-- **✅ Advanced Filtering**: Supports `WHERE`, `AND WHERE`, `OR WHERE` for complex conditions.
-- **✅ Sorting Support**: Allows sorting with `ORDER BY`.
-
----
+- **Select**: Define the columns to be selected.
+- **From**: Specify the table or entity to query from.
+- **Joins**: Support for various types of joins (`INNER`, `LEFT`, `RIGHT`, `CROSS`, `NATURAL`).
+- **Where**: Add conditions using `AND` or `OR`.
+- **Order By**: Specify sorting conditions.
+- **Limit & Offset**: Define limits and offsets for pagination.
+- **Method Chaining**: All methods return the `QueryBuilder` instance for fluent chaining.
 
 ## 📦 Installation
 
-> ⚠️ Note: This package is under active development.
-
-Once released, you’ll be able to install it via **npm** or **yarn**:
-
-### NPM
-
-```sh
+```bash
 npm install @ialopezg/db
 ```
 
-### Yarn
-
-```sh
-yarn add @ialopezg/db
-```
-
----
-
 ## 🔧 Usage
 
-### Selecting Columns
+### Select Columns
 
-```ts
-import { QueryBuilder } from '@ialopezg/db';
-
-const queryBuilder = new QueryBuilder();
-
-// Selecting columns from a table
-const query = queryBuilder
-  .select('id', 'name')
-  .from('users')
-  .getQuery();
-
-console.log(query); // Output: SELECT id, name FROM users
+```typescript
+const query = new QueryBuilder().select("id", "name");
+console.log(query.getQuery()); // SELECT id, name FROM table
 ```
 
-### Adding More Columns
+### From Table
 
-```ts
-queryBuilder.addColumns('email', 'created_at');
-
-console.log(queryBuilder.getQuery()); // Output: SELECT id, name, email, created_at FROM users
+```typescript
+const query = new QueryBuilder().from("users");
+console.log(query.getQuery()); // SELECT * FROM users
 ```
 
-### Joining Tables
+### Joins
 
-```ts
-// INNER JOIN with USING
-const query = queryBuilder
-  .from('orders')
-  .innerJoin('products', 'p', 'using', 'product_id')
-  .getQuery();
+```typescript
+const query = new QueryBuilder()
+  .select("id", "name")
+  .from("users")
+  .innerJoin("products", "p", "on", "users.id = products.user_id");
 
-console.log(query); // Output: SELECT * FROM orders INNER JOIN products p USING (product_id)
-
-// LEFT JOIN with ON condition
-const query = queryBuilder
-  .from('users')
-  .leftJoin('orders', 'o', 'on', 'users.id = orders.user_id')
-  .getQuery();
-
-console.log(query); // Output: SELECT * FROM users LEFT JOIN orders o ON users.id = orders.user_id
+console.log(query.getQuery()); // SELECT id, name FROM users INNER JOIN products p ON users.id = products.user_id
 ```
 
-### Filtering Data with WHERE
+### Where Conditions
 
-```ts
-const query = queryBuilder
-  .from('users')
-  .where('age > 18')
-  .andWhere('status = "active"')
-  .orWhere('role = "admin"')
-  .getQuery();
+```typescript
+const query = new QueryBuilder()
+  .select("id", "name")
+  .from("users")
+  .where("age > 30");
 
-console.log(query); // Output: SELECT * FROM users WHERE age > 18 AND status = "active" OR role = "admin"
+console.log(query.getQuery()); // SELECT id, name FROM users WHERE age > 30
 ```
 
-### Sorting Data
+### AND / OR Conditions
 
-```ts
-const query = queryBuilder
-  .from('users')
-  .orderBy({ column: 'name', order: 'asc' })
-  .getQuery();
+```typescript
+const query = new QueryBuilder()
+  .select("id", "name")
+  .from("users")
+  .where("age > 30")
+  .andWhere("status = 'active'");
 
-console.log(query); // Output: SELECT * FROM users ORDER BY name ASC
+console.log(query.getQuery()); // SELECT id, name FROM users WHERE age > 30 AND status = 'active'
 ```
 
----
+### Order By
 
-### 🐛 Error Handling
+```typescript
+const query = new QueryBuilder()
+  .select("id", "name")
+  .from("users")
+  .orderBy("age", "ASC");
+
+console.log(query.getQuery()); // SELECT id, name FROM users ORDER BY age ASC
+```
+
+### Limit and Offset
+
+```typescript
+const query = new QueryBuilder()
+  .select("id", "name")
+  .from("users")
+  .setLimit(10)
+  .setOffset(20);
+
+console.log(query.getQuery()); // SELECT id, name FROM users LIMIT 10 OFFSET 20
+```
+
+## 🔥 API
+
+### `select(...columns: string[]): this`
+
+Select the columns to retrieve. If no columns are provided, it defaults to `*`.
+
+### `from(entity: Function | string, alias?: string): this`
+
+Specify the table or entity to query from.
+You can pass either a string (table name) or a class (entity).
+Optionally, you can provide an alias.
+
+### `innerJoin(entity: string, alias?: string, conditionType?: JoinConditionType, criteria?: string): this`
+
+Adds an `INNER JOIN` to the query. The condition can be specified with `ON`, `USING`, or `NATURAL`.
+
+### `leftJoin(entity: string, alias?: string, conditionType?: JoinConditionType, criteria?: string): this`
+
+Adds a `LEFT JOIN` to the query. The condition can be specified with `ON`, `USING`, or `NATURAL`.
+
+### `rightJoin(entity: string, alias?: string, conditionType?: JoinConditionType, criteria?: string): this`
+
+Adds a `RIGHT JOIN` to the query. The condition can be specified with `ON`, `USING`, or `NATURAL`.
+
+### `crossJoin(entity: string): this`
+
+Adds a `CROSS JOIN` to the query.
+
+### `naturalJoin(entity: string, alias?: string): this`
+
+Adds a `NATURAL JOIN` to the query.
+
+### `where(condition: string): this`
+
+Adds a `WHERE` condition to the query.
+
+### `andWhere(condition: string): this`
+
+Adds an `AND` condition to the query.
+
+### `orWhere(condition: string): this`
+
+Adds an `OR` condition to the query.
+
+### `orderBy(column: string, order: SortType = 'ASC'): this`
+
+Adds an `ORDER BY` clause to the query, specifying the column and sort order (`ASC` or `DESC`).
+
+### `addOrderBy(column: string, order: SortType = 'ASC'): this`
+
+Adds an additional `ORDER BY` clause, avoiding duplicates.
+
+### `setLimit(value: number): this`
+
+Sets the `LIMIT` for the query, restricting the number of rows returned.
+
+### `setOffset(value: number): this`
+
+Sets the `OFFSET` for the query, allowing for pagination.
+
+### `getQuery(): string`
+
+Generate the SQL query based on the specified conditions.
+
+#### Example: Full Query
+
+```typescript
+const query = new QueryBuilder()
+  .select("id", "name")
+  .from("users", "u")
+  .innerJoin("orders", "o", "on", "u.id = o.user_id")
+  .where("u.status = 'active'")
+  .andWhere("o.date > '2025-01-01'")
+  .orderBy("u.name")
+  .setLimit(10)
+  .setOffset(20);
+
+console.log(query.getQuery()); // SELECT id, name FROM users u INNER JOIN orders o ON u.id = o.user_id WHERE u.status = 'active' AND o.date > '2025-01-01' ORDER BY u.name LIMIT 10 OFFSET 20
+```
+
+## 🐛 Error Handling
 
 If a required condition or criteria is missing, the library throws an error.
 
 #### Example:
+
 ```ts
 // Throws error because criteria is missing
 queryBuilder
-  .leftJoin('users', 'u', 'using', '')
-  .getQuery(); // Error: JOIN requires a valid condition type (ON or USING) and criteria.
+  .leftJoin('users', 'u', 'ON', '')
+  .getQuery(); // Error: INNER JOIN requires a condition criteria when using ON
 ```
-
----
-
-### Changelog
-For details on changes and version updates, refer to the [CHANGELOG.md](./CHANGELOG.md).
 
 ---
 
 ## 📜 License
 
-This project is licensed under the MIT License. See LICENSE for details.
-
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
