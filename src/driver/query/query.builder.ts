@@ -34,15 +34,16 @@ interface OrderByBlock {
 export class QueryBuilder {
   private queryType: QueryType = 'SELECT';
   private columns: string[] = [];
-  private fromBlock: FromBlock;
-  private joinBlocks: JoinBlock[] = [];
-  private conditions: WhereBlock[] = [];
-  private sorting: OrderByBlock[] = [];
-  private limit: number = -1;
-  private offset: number = -1;
+  private fromClause: FromBlock;
+  private joinClauses: JoinBlock[] = [];
+  private whereClause: WhereBlock[] = [];
+  private groupByColumns: string[] = [];
+  private orderByClause: OrderByBlock[] = [];
+  private limitClause: number = -1;
+  private offsetClause: number = -1;
 
   constructor(public readonly getTableNameCallback?: (entity: Function) => string) {
-    this.fromBlock = { entity: '', alias: undefined };
+    this.fromClause = { entity: '', alias: undefined };
   }
 
   /**
@@ -99,7 +100,7 @@ export class QueryBuilder {
       throw new Error('FROM clause requires a valid table name or entity');
     }
 
-    this.fromBlock = { entity, alias };
+    this.fromClause = { entity, alias };
 
     return this;
   }
@@ -248,6 +249,40 @@ export class QueryBuilder {
   }
 
   /**
+   * Specifies the column to group by.
+   * Replaces the existing GROUP BY clause.
+   *
+   * @param {string[]} columns - The column name to group by.
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   * @throws {Error} If the column name is invalid.
+   */
+  groupBy(...columns: string[]): this {
+    this.validateGroupByColumnsInput(columns);
+    this.groupByColumns = columns;
+
+    return this;
+  }
+
+  /**
+   * Adds a column to the GROUP BY clause.
+   * Ensures no duplicate columns are added.
+   *
+   * @param {string[]} columns - The column name to add to the GROUP BY clause.
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   * @throws {Error} If the column name is invalid.
+   */
+  addGroupBy(...columns: string[]): this {
+    this.validateGroupByColumnsInput(columns);
+    for (const column of columns) {
+      if (!this.groupByColumns.includes(column)) {
+        this.groupByColumns.push(column);
+      }
+    }
+
+    return this;
+  }
+
+  /**
    * Initializes or replaces the ORDER BY clause with a new array of sorting conditions.
    *
    * @param {string} column - The name of the column to sort by.
@@ -255,7 +290,7 @@ export class QueryBuilder {
    * @returns {this} The current QueryBuilder instance for method chaining.
    */
   orderBy(column: string, order: SortType = 'ASC'): this {
-    this.sorting = [{ column, order }];
+    this.orderByClause = [{ column, order }];
 
     return this;
   }
@@ -269,8 +304,8 @@ export class QueryBuilder {
    * @returns {this} The current QueryBuilder instance for method chaining.
    */
   addOrderBy(column: string, order: SortType = 'ASC'): this {
-    if (!this.sorting.some((s) => s.column === column)) {
-      this.sorting.push({ column, order });
+    if (!this.orderByClause.some((s) => s.column === column)) {
+      this.orderByClause.push({ column, order });
     }
 
     return this;
@@ -283,7 +318,7 @@ export class QueryBuilder {
    * @returns {this} The current QueryBuilder instance for method chaining.
    */
   setLimit(value: number): this {
-    this.limit = value;
+    this.limitClause = value;
 
     return this;
   }
@@ -295,7 +330,7 @@ export class QueryBuilder {
    * @returns {this} The current QueryBuilder instance for method chaining.
    */
   setOffset(value: number): this {
-    this.offset = value;
+    this.offsetClause = value;
 
     return this;
   }
@@ -312,9 +347,11 @@ export class QueryBuilder {
    * console.log(query); // SELECT id, name FROM users u;
    */
   getQuery(): string {
-    if (!this.fromBlock.entity) {
+    if (!this.fromClause.entity) {
       throw new Error('FROM clause must be defined before generating the query');
     }
+
+    this.validateGroupBy();
 
     const selectClause = this.createSelectClause();
     const joinClauses = this.createJoinClauses();
@@ -322,8 +359,11 @@ export class QueryBuilder {
     const orderByClause = this.createOrderByClause();
     const limitClause = this.createLimitClause();
     const offsetClause = this.createOffsetClause();
+    const groupByClause = this.createGroupByClause();
 
-    return `${selectClause}${joinClauses ? ` ${joinClauses}` : ''}${whereClause}${orderByClause}${limitClause}${offsetClause}`.trim();
+    return `${selectClause}${joinClauses ? ` ${joinClauses}` : ''}${whereClause}${
+      groupByClause ? ` ${groupByClause}` : ''
+    }${orderByClause}${limitClause}${offsetClause}`.trim();
   }
 
   /**
@@ -338,8 +378,8 @@ export class QueryBuilder {
     }
 
     let query = `SELECT ${this.columns.join(', ')} FROM ${tableName}`;
-    if (this.fromBlock?.alias) {
-      query += ` ${this.fromBlock.alias}`;
+    if (this.fromClause?.alias) {
+      query += ` ${this.fromClause.alias}`;
     }
 
     return query.trim();
@@ -351,7 +391,7 @@ export class QueryBuilder {
    * @returns {string} The JOIN clauses of the query.
    */
   protected createJoinClauses(): string {
-    return this.joinBlocks
+    return this.joinClauses
       .map((join) => {
         if (join.joinType === 'CROSS') {
           return `${join.joinType} JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''}`;
@@ -377,15 +417,24 @@ export class QueryBuilder {
    * @returns {string} The WHERE clause of the query.
    */
   protected createWhereClause(): string {
-    if (this.conditions.length === 0) {
+    if (this.whereClause.length === 0) {
       return '';
     }
 
-    return ` WHERE ${this.conditions
+    return ` WHERE ${this.whereClause
       .map((c, index) => {
         return index === 0 ? c.condition : `${c.type} ${c.condition}`;
       })
       .join(' ')}`;
+  }
+
+  /**
+   * Creates the GROUP BY clause of the query.
+   *
+   * @returns {string} The GROUP BY clause of the query.
+   */
+  protected createGroupByClause(): string {
+    return this.groupByColumns.length > 0 ? `GROUP BY ${this.groupByColumns.join(', ')}` : '';
   }
 
   /**
@@ -395,37 +444,37 @@ export class QueryBuilder {
    * @throws {Error} If no sorting conditions are specified.
    */
   protected createOrderByClause(): string {
-    if (this.sorting.length === 0) {
+    if (this.orderByClause.length === 0) {
       return '';
     }
 
-    return ` ORDER BY ${this.sorting.map((o) => `${o.column} ${o.order ?? 'ASC'}`).join(', ')}`;
+    return ` ORDER BY ${this.orderByClause.map((o) => `${o.column} ${o.order ?? 'ASC'}`).join(', ')}`;
   }
 
   /**
    * @protected
-   * Creates the LIMIT clause for the query, if a limit is set.
+   * Creates the LIMIT clause for the query if a limit is set.
    *
    * @returns {string} The LIMIT clause of the query, or undefined if no limit is set.
    */
   protected createLimitClause(): string {
-    if (this.limit === -1) {
+    if (this.limitClause === -1) {
       return '';
     }
-    return ` LIMIT ${this.limit}`;
+    return ` LIMIT ${this.limitClause}`;
   }
 
   /**
    * @protected
-   * Creates the OFFSET clause for the query, if an offset is set.
+   * Creates the OFFSET clause for the query if an offset is set.
    *
    * @returns {string} The OFFSET clause of the query, or undefined if no offset is set.
    */
   protected createOffsetClause(): string {
-    if (this.offset === -1) {
+    if (this.offsetClause === -1) {
       return '';
     }
-    return ` OFFSET ${this.offset}`;
+    return ` OFFSET ${this.offsetClause}`;
   }
 
   /**
@@ -436,18 +485,18 @@ export class QueryBuilder {
    * @throws {Error} If the table name is not specified.
    */
   protected getTableName(): string {
-    if (!this.fromBlock?.entity) {
+    if (!this.fromClause?.entity) {
       throw new Error('Table name must be specified using from()');
     }
 
-    if (typeof this.fromBlock.entity === 'function') {
+    if (typeof this.fromClause.entity === 'function') {
       if (!this.getTableNameCallback) {
         throw new Error('getTableNameCallback is required to resolve entity names');
       }
-      return this.getTableNameCallback(this.fromBlock.entity);
+      return this.getTableNameCallback(this.fromClause.entity);
     }
 
-    return this.fromBlock.entity;
+    return this.fromClause.entity;
   }
 
   private addJoin(
@@ -464,7 +513,7 @@ export class QueryBuilder {
       throw new Error(`${joinType} JOIN requires a condition criteria when using ${conditionType}`);
     }
 
-    this.joinBlocks.push({ joinType, entity, alias, conditionType, criteria });
+    this.joinClauses.push({ joinType, entity, alias, conditionType, criteria });
 
     return this;
   }
@@ -474,8 +523,34 @@ export class QueryBuilder {
       throw new Error('WHERE condition cannot be empty');
     }
 
-    this.conditions.push({ type, condition });
+    this.whereClause.push({ type, condition });
 
     return this;
+  }
+
+  private validateGroupBy(): void {
+    if (this.groupByColumns.length === 0) {
+      return;
+    }
+
+    const isAggregateFunction = (column: string): boolean => {
+      return /\b(COUNT|SUM|AVG|MIN|MAX)\s*\(.*\)/i.test(column);
+    };
+
+    const nonAggregateColumns = this.columns.filter((col) => !isAggregateFunction(col));
+
+    for (const col of nonAggregateColumns) {
+      if (!this.groupByColumns.includes(col)) {
+        throw new Error(
+          `Column "${col}" must be included in GROUP BY clause or used in an aggregate function.`
+        );
+      }
+    }
+  }
+
+  private validateGroupByColumnsInput(columns: string[]): void {
+    if (!Array.isArray(columns) || columns.length === 0 || columns.some((c) => !c.trim())) {
+      throw new Error('GROUP BY requires at least one non-empty column');
+    }
   }
 }

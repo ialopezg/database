@@ -25,12 +25,12 @@ describe('QueryBuilder - Helpers', () => {
     it('should return the table name if specified directly using from()', () => {
       queryBuilder.from('users');
 
-      const tableName = queryBuilder['fromBlock'].entity;
+      const tableName = queryBuilder['fromClause'].entity;
       expect(tableName).toBe('users');
     });
 
     it('should return the resolved table name if the entity is a function and getTableNameCallback is provided', () => {
-      const qb = new QueryBuilder((entity: any) => entity())
+      const qb = new QueryBuilder((entity: any) => entity());
       qb.from(() => 'users');
 
       const tableName = qb['getTableName']();
@@ -47,7 +47,7 @@ describe('QueryBuilder - Helpers', () => {
 
     it('should return the resolved table name if the entity is not provided and getTableNameCallback is provided', () => {
       const qb = new QueryBuilder();
-      qb['fromBlock'] = { entity: 'users' };
+      qb['fromClause'] = { entity: 'users' };
 
       const tableName = qb['getTableName']();
       expect(tableName).toBe('users');
@@ -80,7 +80,7 @@ describe('QueryBuilder - Helpers', () => {
   describe('createJoinClauses', () => {
     it('should throw an error for CROSS JOIN', () => {
       queryBuilder.from('users');
-      queryBuilder['joinBlocks'].push({ joinType: 'CROSS', entity: 'sessions' })
+      queryBuilder['joinClauses'].push({ joinType: 'CROSS', entity: 'sessions' });
       const query = queryBuilder['createJoinClauses']();
 
       expect(query).toBe('CROSS JOIN sessions');
@@ -88,7 +88,7 @@ describe('QueryBuilder - Helpers', () => {
 
     it('should throw an error for CROSS JOIN when specify entity alias', () => {
       queryBuilder.from('users');
-      queryBuilder['joinBlocks'].push({ joinType: 'CROSS', entity: 'sessions', alias: 's' })
+      queryBuilder['joinClauses'].push({ joinType: 'CROSS', entity: 'sessions', alias: 's' });
       const query = queryBuilder['createJoinClauses']();
 
       expect(query).toBe('CROSS JOIN sessions s');
@@ -96,7 +96,7 @@ describe('QueryBuilder - Helpers', () => {
 
     it('should throw an error for INNER JOIN', () => {
       queryBuilder.from('users');
-      queryBuilder['joinBlocks'].push({ joinType: 'INNER', entity: 'sessions' })
+      queryBuilder['joinClauses'].push({ joinType: 'INNER', entity: 'sessions' });
       const query = queryBuilder['createJoinClauses']();
 
       expect(query).toBe('INNER JOIN sessions');
@@ -104,7 +104,7 @@ describe('QueryBuilder - Helpers', () => {
 
     it('should throw an error for NATURAL JOIN with entity alias', () => {
       queryBuilder.from('users');
-      queryBuilder['joinBlocks'].push({ joinType: 'NATURAL', entity: 'sessions', alias: 's' })
+      queryBuilder['joinClauses'].push({ joinType: 'NATURAL', entity: 'sessions', alias: 's' });
       const query = queryBuilder['createJoinClauses']();
 
       expect(query).toBe('NATURAL JOIN sessions s');
@@ -112,7 +112,12 @@ describe('QueryBuilder - Helpers', () => {
 
     it('should throw an error for INNER JOIN without entity alias and USING as conditionType', () => {
       queryBuilder.from('users');
-      queryBuilder['joinBlocks'].push({ joinType: 'INNER', entity: 'sessions', conditionType: 'USING', criteria: 'user_id' })
+      queryBuilder['joinClauses'].push({
+        joinType: 'INNER',
+        entity: 'sessions',
+        conditionType: 'USING',
+        criteria: 'user_id',
+      });
       const query = queryBuilder['createJoinClauses']();
 
       expect(query).toBe('INNER JOIN sessions USING (user_id)');
@@ -120,7 +125,12 @@ describe('QueryBuilder - Helpers', () => {
 
     it('should throw an error for INNER JOIN without entity alias and ON as conditionType', () => {
       queryBuilder.from('users');
-      queryBuilder['joinBlocks'].push({ joinType: 'INNER', entity: 'sessions', conditionType: 'ON', criteria: 'users.user_id = sessions.user_id' })
+      queryBuilder['joinClauses'].push({
+        joinType: 'INNER',
+        entity: 'sessions',
+        conditionType: 'ON',
+        criteria: 'users.user_id = sessions.user_id',
+      });
       const query = queryBuilder['createJoinClauses']();
 
       expect(query).toBe('INNER JOIN sessions ON users.user_id = sessions.user_id');
@@ -128,7 +138,13 @@ describe('QueryBuilder - Helpers', () => {
 
     it('should throw an error for INNER JOIN with entity alias and USING as conditionType', () => {
       queryBuilder.from('users');
-      queryBuilder['joinBlocks'].push({ joinType: 'INNER', entity: 'sessions', alias: 's', conditionType: 'USING', criteria: 'user_id' })
+      queryBuilder['joinClauses'].push({
+        joinType: 'INNER',
+        entity: 'sessions',
+        alias: 's',
+        conditionType: 'USING',
+        criteria: 'user_id',
+      });
       const query = queryBuilder['createJoinClauses']();
 
       expect(query).toBe('INNER JOIN sessions s USING (user_id)');
@@ -150,9 +166,17 @@ describe('QueryBuilder - Helpers', () => {
 
     it('should return default sorting when no order specified', () => {
       queryBuilder = new QueryBuilder();
-      queryBuilder['sorting'] = [{ column: 'user_id' }]
+      queryBuilder['orderByClause'] = [{ column: 'user_id' }];
 
       expect(queryBuilder['createOrderByClause']()).toBe(' ORDER BY user_id ASC');
+    });
+  });
+
+  describe('validateGroupByColumnsInput', () => {
+    it('should generate the ORDER BY clause correctly', () => {
+      expect(
+        () => queryBuilder['validateGroupByColumnsInput']([])
+      ).toThrow('GROUP BY requires at least one non-empty column');
     });
   });
 });

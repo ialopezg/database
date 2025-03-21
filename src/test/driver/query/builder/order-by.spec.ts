@@ -22,7 +22,7 @@ describe('QueryBuilder- addOrderBy', () => {
     const queryBuilder = new QueryBuilder().orderBy('name', 'ASC');
     const query = queryBuilder.addOrderBy('id', 'DESC');
 
-    expect(query['sorting']).toEqual([
+    expect(query['orderByClause']).toEqual([
       { column: 'name', order: 'ASC' },
       { column: 'id', order: 'DESC' }
     ]);
@@ -32,6 +32,6 @@ describe('QueryBuilder- addOrderBy', () => {
     const queryBuilder = new QueryBuilder().orderBy('name', 'ASC');
     const query = queryBuilder.addOrderBy('name', 'DESC');
 
-    expect(query['sorting']).toEqual([{ column: 'name', order: 'ASC' }]);
+    expect(query['orderByClause']).toEqual([{ column: 'name', order: 'ASC' }]);
   });
 });
