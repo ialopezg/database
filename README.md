@@ -5,14 +5,14 @@
 ![Codecov](https://codecov.io/gh/ialopezg/db/branch/main/graph/badge.svg)
 
 This library provides a simple and flexible query builder for generating SQL queries.
-It supports multiple join types and includes support for `INNER`, `LEFT`, `RIGHT`,
-`CROSS`, and `NATURAL` joins, as well as condition types like `ON` and `USING`.
+It supports multiple join types and includes support for INNER, LEFT, RIGHT, CROSS, and NATURAL joins, as well as
+condition types like ON and USING.
 
 ## QueryBuilder
 
-A simple and flexible SQL query builder for constructing `SELECT`, `INSERT`, `UPDATE`, and `DELETE` queries.
-It supports joins, conditions, sorting, limits, and offsets, allowing you to easily build and customize SQL queries in a
-clean and intuitive manner.
+A simple and flexible SQL query builder for constructing SELECT, INSERT, UPDATE, and DELETE queries.
+It supports joins, conditions, sorting, limits, offsets, and grouping, allowing you to easily build and customize SQL
+queries in a clean and intuitive manner.
 
 ## 🚀 Features
 
@@ -20,6 +20,7 @@ clean and intuitive manner.
 - **From**: Specify the table or entity to query from.
 - **Joins**: Support for various types of joins (`INNER`, `LEFT`, `RIGHT`, `CROSS`, `NATURAL`).
 - **Where**: Add conditions using `AND` or `OR`.
+- **Group By**: Group results based on one or more columns.
 - **Order By**: Specify sorting conditions.
 - **Limit & Offset**: Define limits and offsets for pagination.
 - **Method Chaining**: All methods return the `QueryBuilder` instance for fluent chaining.
@@ -80,6 +81,29 @@ const query = new QueryBuilder()
 console.log(query.getQuery()); // SELECT id, name FROM users WHERE age > 30 AND status = 'active'
 ```
 
+### Group By
+
+```typescript
+const query = new QueryBuilder()
+  .select("category", "COUNT(id)")
+  .from("products")
+  .groupBy("category");
+
+console.log(query.getQuery()); // SELECT category, COUNT(id) FROM products GROUP BY category
+```
+
+#### Adding Group By Columns
+
+```typescript
+const query = new QueryBuilder()
+  .select('category', 'sub_category', 'COUNT(id)')
+  .from('products')
+  .groupBy('category')
+  .addGroupBy('sub_category');
+
+console.log(query.getQuery()); // SELECT category, sub_category, COUNT(id) FROM products GROUP BY category, sub_category
+```
+
 ### Order By
 
 ```typescript
@@ -107,7 +131,15 @@ console.log(query.getQuery()); // SELECT id, name FROM users LIMIT 10 OFFSET 20
 
 ### `select(...columns: string[]): this`
 
-Select the columns to retrieve. If no columns are provided, it defaults to `*`.
+Select the columns to retrieve.
+
+> If no columns are provided, it defaults to `*`.
+
+> Replace any existing `SELECT` columns.
+
+### `addColumns(...columns: string[]): this`
+
+Adds additional columns to the SELECT clause, ensuring no duplicates.
 
 ### `from(entity: Function | string, alias?: string): this`
 
@@ -147,6 +179,16 @@ Adds an `AND` condition to the query.
 
 Adds an `OR` condition to the query.
 
+### `groupBy(columns: string | string[]): this`
+
+Define the GROUP BY clause with one or more columns.
+
+> Replace any existing `GROUP BY` columns.
+
+### `addGroupBy(columns: string | string[]): this`
+
+Adds additional columns to the GROUP BY clause, ensuring no duplicates.
+
 ### `orderBy(column: string, order: SortType = 'ASC'): this`
 
 Adds an `ORDER BY` clause to the query, specifying the column and sort order (`ASC` or `DESC`).
@@ -176,11 +218,12 @@ const query = new QueryBuilder()
   .innerJoin("orders", "o", "on", "u.id = o.user_id")
   .where("u.status = 'active'")
   .andWhere("o.date > '2025-01-01'")
+  .groupBy("u.name")
   .orderBy("u.name")
   .setLimit(10)
   .setOffset(20);
 
-console.log(query.getQuery()); // SELECT id, name FROM users u INNER JOIN orders o ON u.id = o.user_id WHERE u.status = 'active' AND o.date > '2025-01-01' ORDER BY u.name LIMIT 10 OFFSET 20
+console.log(query.getQuery()); // SELECT id, name FROM users u INNER JOIN orders o ON u.id = o.user_id WHERE u.status = 'active' AND o.date > '2025-01-01' GROUP BY u.name ORDER BY u.name LIMIT 10 OFFSET 20
 ```
 
 ## 🐛 Error Handling
