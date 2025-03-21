@@ -1,7 +1,7 @@
-type QueryType = 'select' | 'insert' | 'update' | 'delete';
-type JoinType = 'inner' | 'left' | 'right' | 'cross';
-type JoinConditionType = 'on' | 'using' | 'natural';
-type ConditionType = 'simple' | 'and' | 'or';
+type QueryType = 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE';
+type JoinType = 'INNER' | 'LEFT' | 'RIGHT' | 'CROSS';
+type JoinConditionType = 'ON' | 'USING' | 'NATURAL';
+type ConditionType = 'SIMPLE' | 'AND' | 'OR';
 type SortType = 'ASC' | 'DESC';
 
 interface FromBlock {
@@ -32,7 +32,7 @@ interface OrderByBlock {
  * A query builder class that facilitates the construction of SQL queries.
  */
 export class QueryBuilder {
-  private queryType: QueryType = 'select';
+  private queryType: QueryType = 'SELECT';
   private columns: string[] = [];
   private fromBlock: FromBlock;
   private joinBlocks: JoinBlock[] = [];
@@ -54,7 +54,7 @@ export class QueryBuilder {
    * const query = new QueryBuilder().select(["id", "name"]);
    */
   select(...columns: string[]): this {
-    this.queryType = 'select';
+    this.queryType = 'SELECT';
 
     this.columns = columns;
 
@@ -130,11 +130,11 @@ export class QueryBuilder {
     if (!conditionType) {
       throw new Error('INNER JOIN requires a condition type (ON, USING, or NATURAL)');
     }
-    if (conditionType !== 'natural' && !criteria) {
-      throw new Error(`INNER JOIN with ${conditionType.toUpperCase()} requires criteria`);
+    if (conditionType !== 'NATURAL' && !criteria) {
+      throw new Error(`INNER JOIN with ${conditionType} requires criteria`);
     }
 
-    this.joinBlocks.push({ type: 'inner', entity, alias, conditionType, criteria });
+    this.joinBlocks.push({ type: 'INNER', entity, alias, conditionType, criteria });
 
     return this;
   }
@@ -167,11 +167,11 @@ export class QueryBuilder {
     if (!conditionType) {
       throw new Error('LEFT JOIN requires a condition type (ON, USING, or NATURAL)');
     }
-    if (conditionType !== 'natural' && !criteria) {
-      throw new Error(`LEFT JOIN with ${conditionType.toUpperCase()} requires criteria`);
+    if (conditionType !== 'NATURAL' && !criteria) {
+      throw new Error(`LEFT JOIN with ${conditionType} requires criteria`);
     }
 
-    this.joinBlocks.push({ type: 'left', entity, alias, conditionType, criteria });
+    this.joinBlocks.push({ type: 'LEFT', entity, alias, conditionType, criteria });
 
     return this;
   }
@@ -204,11 +204,11 @@ export class QueryBuilder {
     if (!conditionType) {
       throw new Error('RIGHT JOIN requires a condition type (ON, USING, or NATURAL)');
     }
-    if (conditionType !== 'natural' && !criteria) {
-      throw new Error(`RIGHT JOIN with ${conditionType.toUpperCase()} requires criteria`);
+    if (conditionType !== 'NATURAL' && !criteria) {
+      throw new Error(`RIGHT JOIN with ${conditionType} requires criteria`);
     }
 
-    this.joinBlocks.push({ type: 'right', entity, alias, conditionType, criteria });
+    this.joinBlocks.push({ type: 'RIGHT', entity, alias, conditionType, criteria });
 
     return this;
   }
@@ -229,7 +229,7 @@ export class QueryBuilder {
       throw new Error('Join entity is required.');
     }
 
-    this.joinBlocks.push({ type: 'cross', entity });
+    this.joinBlocks.push({ type: 'CROSS', entity });
 
     return this;
   }
@@ -245,7 +245,7 @@ export class QueryBuilder {
    */
   where(condition: string): this {
     if (condition?.trim()) {
-      this.conditions.push({ type: 'simple', condition });
+      this.conditions.push({ type: 'SIMPLE', condition });
     }
     return this;
   }
@@ -260,7 +260,7 @@ export class QueryBuilder {
    * const query = new QueryBuilder().select("id").from("users", "u").andWhere("u.id = 1");
    */
   andWhere(condition: string): this {
-    this.conditions.push({ type: 'and', condition });
+    this.conditions.push({ type: 'AND', condition });
 
     return this;
   }
@@ -275,7 +275,7 @@ export class QueryBuilder {
    * const query = new QueryBuilder().select("id").from("users", "u").orWhere("u.id = 1");
    */
   orWhere(condition: string): this {
-    this.conditions.push({ type: 'or', condition });
+    this.conditions.push({ type: 'OR', condition });
 
     return this;
   }
@@ -360,24 +360,22 @@ export class QueryBuilder {
   protected createJoinClauses(): string {
     return this.joinBlocks
       .map((join) => {
-        if (join.type === 'cross') {
-          return ` CROSS JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''}`;
+        if (join.type === 'CROSS') {
+          return ` ${join.type} JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''}`;
         }
 
-        if (join.conditionType === 'natural') {
-          return ` ${join.type.toUpperCase()} NATURAL JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''}`;
+        if (join.conditionType === 'NATURAL') {
+          return ` ${join.type} NATURAL JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''}`;
         }
 
         if (!join.conditionType || !join.criteria) {
-          throw new Error(
-            `${join.type.toUpperCase()} JOIN requires a condition type (ON or USING) and criteria`
-          );
+          throw new Error(`${join.type} JOIN requires a condition type (ON or USING) and criteria`);
         }
 
         const formattedCriteria =
-          join.conditionType === 'using' ? `(${join.criteria})` : join.criteria;
+          join.conditionType === 'USING' ? `(${join.criteria})` : join.criteria;
 
-        return ` ${join.type.toUpperCase()} JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''} ${join.conditionType.toUpperCase()} ${formattedCriteria}`;
+        return ` ${join.type} JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''} ${join.conditionType} ${formattedCriteria}`;
       })
       .join(' ');
   }
@@ -394,7 +392,7 @@ export class QueryBuilder {
 
     return ` WHERE ${this.conditions
       .map((c, index) => {
-        return index === 0 ? c.condition : `${c.type.toUpperCase()} ${c.condition}`;
+        return index === 0 ? c.condition : `${c.type} ${c.condition}`;
       })
       .join(' ')}`;
   }

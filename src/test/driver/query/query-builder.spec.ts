@@ -140,7 +140,7 @@ describe('QueryBuilder', () => {
 
     it('should throw an error for INNER JOIN when conditionType or criteria are missing', () => {
       queryBuilder.from('users');
-      queryBuilder['joinBlocks'].push({ type: 'inner', entity: 'sessions' })
+      queryBuilder['joinBlocks'].push({ type: 'INNER', entity: 'sessions' })
 
       expect(() => {
         queryBuilder['createJoinClauses']();
@@ -149,12 +149,6 @@ describe('QueryBuilder', () => {
   });
 
   describe('JOINs', () => {
-    let queryBuilder: QueryBuilder;
-
-    beforeEach(() => {
-      queryBuilder = new QueryBuilder();
-    });
-
     describe('INNER', () => {
       it('should throw an error if no entity is provided', () => {
         expect(() => {
@@ -180,14 +174,14 @@ describe('QueryBuilder', () => {
         }).toThrow('INNER JOIN requires a condition type (ON, USING, or NATURAL)');
 
         expect(() => {
-          queryBuilder.innerJoin('products', 'p', 'on');
+          queryBuilder.innerJoin('products', 'p', 'ON');
         }).toThrow('INNER JOIN with ON requires criteria');
       });
 
       it('should not throw an error if valid parameters are provided', () => {
         const entity = 'products';
         const alias = 'p';
-        const conditionType = 'on';
+        const conditionType = 'ON';
         const criteria = 'users.id = products.user_id';
 
         expect(() => {
@@ -197,17 +191,17 @@ describe('QueryBuilder', () => {
         // Verify that the join block was added to the joinBlocks array
         const joinBlock = queryBuilder['joinBlocks'][0]; // Access private property for test
         expect(joinBlock).toEqual({
-          type: 'inner',
+          type: 'INNER',
           entity: 'products',
           alias: 'p',
-          conditionType: 'on',
+          conditionType: 'ON',
           criteria: 'users.id = products.user_id',
         });
       });
 
       it('should handle innerJoin with missing alias', () => {
         const entity = 'products';
-        const conditionType = 'on';
+        const conditionType = 'ON';
         const criteria = 'users.id = products.user_id';
 
         expect(() => {
@@ -217,17 +211,17 @@ describe('QueryBuilder', () => {
         // Verify that the join block was added to the joinBlocks array
         const joinBlock = queryBuilder['joinBlocks'][0]; // Access private property for test
         expect(joinBlock).toEqual({
-          type: 'inner',
+          type: 'INNER',
           entity: 'products',
           alias: undefined,
-          conditionType: 'on',
+          conditionType: 'ON',
           criteria: 'users.id = products.user_id',
         });
       });
 
       it('should handle innerJoin with valid parameters and without alias', () => {
         const entity = 'products';
-        const conditionType = 'using';
+        const conditionType = 'USING';
         const criteria = '(id, user_id)';
 
         expect(() => {
@@ -237,10 +231,10 @@ describe('QueryBuilder', () => {
         // Verify the join block
         const joinBlock = queryBuilder['joinBlocks'][0];
         expect(joinBlock).toEqual({
-          type: 'inner',
+          type: 'INNER',
           entity: 'products',
           alias: undefined,
-          conditionType: 'using',
+          conditionType: 'USING',
           criteria: '(id, user_id)',
         });
       });
@@ -271,14 +265,14 @@ describe('QueryBuilder', () => {
         }).toThrow('LEFT JOIN requires a condition type (ON, USING, or NATURAL)');
 
         expect(() => {
-          queryBuilder.leftJoin('products', 'p', 'on');
+          queryBuilder.leftJoin('products', 'p', 'ON');
         }).toThrow('LEFT JOIN with ON requires criteria');
       });
 
       it('should not throw an error if valid parameters are provided', () => {
         const entity = 'products';
         const alias = 'p';
-        const conditionType = 'on';
+        const conditionType = 'ON';
         const criteria = 'users.id = products.user_id';
 
         expect(() => {
@@ -288,17 +282,17 @@ describe('QueryBuilder', () => {
         // Verify that the join block was added to the joinBlocks array
         const joinBlock = queryBuilder['joinBlocks'][0]; // Access private property for test
         expect(joinBlock).toEqual({
-          type: 'left',
+          type: 'LEFT',
           entity: 'products',
           alias: 'p',
-          conditionType: 'on',
+          conditionType: 'ON',
           criteria: 'users.id = products.user_id',
         });
       });
 
       it('should handle leftJoin with missing alias', () => {
         const entity = 'products';
-        const conditionType = 'on';
+        const conditionType = 'ON';
         const criteria = 'users.id = products.user_id';
 
         expect(() => {
@@ -308,17 +302,17 @@ describe('QueryBuilder', () => {
         // Verify that the join block was added to the joinBlocks array
         const joinBlock = queryBuilder['joinBlocks'][0]; // Access private property for test
         expect(joinBlock).toEqual({
-          type: 'left',
+          type: 'LEFT',
           entity: 'products',
           alias: undefined,
-          conditionType: 'on',
+          conditionType: 'ON',
           criteria: 'users.id = products.user_id',
         });
       });
 
       it('should handle leftJoin with valid parameters and without alias', () => {
         const entity = 'products';
-        const conditionType = 'using';
+        const conditionType = 'USING';
         const criteria = '(id, user_id)';
 
         expect(() => {
@@ -328,10 +322,10 @@ describe('QueryBuilder', () => {
         // Verify the join block
         const joinBlock = queryBuilder['joinBlocks'][0];
         expect(joinBlock).toEqual({
-          type: 'left',
+          type: 'LEFT',
           entity: 'products',
           alias: undefined,
-          conditionType: 'using',
+          conditionType: 'USING',
           criteria: '(id, user_id)',
         });
       });
@@ -362,14 +356,14 @@ describe('QueryBuilder', () => {
         }).toThrow('RIGHT JOIN requires a condition type (ON, USING, or NATURAL)');
 
         expect(() => {
-          queryBuilder.rightJoin('products', 'p', 'on');
+          queryBuilder.rightJoin('products', 'p', 'ON');
         }).toThrow('RIGHT JOIN with ON requires criteria');
       });
 
       it('should not throw an error if valid parameters are provided', () => {
         const entity = 'products';
         const alias = 'p';
-        const conditionType = 'on';
+        const conditionType = 'ON';
         const criteria = 'users.id = products.user_id';
 
         expect(() => {
@@ -379,17 +373,17 @@ describe('QueryBuilder', () => {
         // Verify that the join block was added to the joinBlocks array
         const joinBlock = queryBuilder['joinBlocks'][0]; // Access private property for test
         expect(joinBlock).toEqual({
-          type: 'right',
+          type: 'RIGHT',
           entity: 'products',
           alias: 'p',
-          conditionType: 'on',
+          conditionType: 'ON',
           criteria: 'users.id = products.user_id',
         });
       });
 
       it('should handle rightJoin with missing alias', () => {
         const entity = 'products';
-        const conditionType = 'on';
+        const conditionType = 'ON';
         const criteria = 'users.id = products.user_id';
 
         expect(() => {
@@ -399,17 +393,17 @@ describe('QueryBuilder', () => {
         // Verify that the join block was added to the joinBlocks array
         const joinBlock = queryBuilder['joinBlocks'][0]; // Access private property for test
         expect(joinBlock).toEqual({
-          type: 'right',
+          type: 'RIGHT',
           entity: 'products',
           alias: undefined,
-          conditionType: 'on',
+          conditionType: 'ON',
           criteria: 'users.id = products.user_id',
         });
       });
 
       it('should handle rightJoin with valid parameters and without alias', () => {
         const entity = 'products';
-        const conditionType = 'using';
+        const conditionType = 'USING';
         const criteria = '(id, user_id)';
 
         expect(() => {
@@ -419,10 +413,10 @@ describe('QueryBuilder', () => {
         // Verify the join block
         const joinBlock = queryBuilder['joinBlocks'][0];
         expect(joinBlock).toEqual({
-          type: 'right',
+          type: 'RIGHT',
           entity: 'products',
           alias: undefined,
-          conditionType: 'using',
+          conditionType: 'USING',
           criteria: '(id, user_id)',
         });
       });
@@ -453,7 +447,7 @@ describe('QueryBuilder', () => {
         // Verify that the join block was added to the joinBlocks array
         const joinBlock = queryBuilder['joinBlocks'][0]; // Access private property for test
         expect(joinBlock).toEqual({
-          type: 'cross',
+          type: 'CROSS',
           entity: 'orders',
         });
       });
@@ -468,21 +462,21 @@ describe('QueryBuilder', () => {
 
     describe('NATURAL Join Handling', () => {
       it('should generate a correct NATURAL JOIN clause', () => {
-        queryBuilder.from('users').innerJoin('orders', 'o', 'natural');
+        queryBuilder.from('users').innerJoin('orders', 'o', 'NATURAL');
 
         const query = queryBuilder.getQuery();
         expect(query).toContain('INNER NATURAL JOIN orders o');
       });
 
       it('should generate a correct NATURAL LEFT JOIN clause', () => {
-        queryBuilder.from('users').leftJoin('customers', 'c', 'natural');
+        queryBuilder.from('users').leftJoin('customers', 'c', 'NATURAL');
 
         const query = queryBuilder.getQuery();
         expect(query).toContain('LEFT NATURAL JOIN customers c');
       });
 
       it('should generate a correct NATURAL RIGHT JOIN clause', () => {
-        queryBuilder.from('users').rightJoin('products', 'p', 'natural');
+        queryBuilder.from('users').rightJoin('products', 'p', 'NATURAL');
 
         const query = queryBuilder.getQuery();
         expect(query).toContain('RIGHT NATURAL JOIN products p');
@@ -493,7 +487,7 @@ describe('QueryBuilder', () => {
       it('should generate a correct JOIN clause with USING condition', () => {
         queryBuilder
           .from('categories', 'c')
-          .innerJoin('orders', 'o', 'using', 'user_id');
+          .innerJoin('orders', 'o', 'USING', 'user_id');
 
         const query = queryBuilder.getQuery();
         expect(query).toContain('INNER JOIN orders o USING (user_id)');
@@ -502,7 +496,7 @@ describe('QueryBuilder', () => {
       it('should generate a correct LEFT JOIN clause with USING condition', () => {
         queryBuilder
           .from('categories', 'c')
-          .leftJoin('products', 'p', 'using', 'product_id');
+          .leftJoin('products', 'p', 'USING', 'product_id');
 
         const query = queryBuilder.getQuery();
         expect(query).toContain('LEFT JOIN products p USING (product_id)');
@@ -511,7 +505,7 @@ describe('QueryBuilder', () => {
       it('should generate a correct RIGHT JOIN clause with USING condition', () => {
         queryBuilder
           .from('product', 'p')
-          .rightJoin('categories', 'c', 'using', 'category_id');
+          .rightJoin('categories', 'c', 'USING', 'category_id');
 
         const query = queryBuilder.getQuery();
         expect(query).toContain('RIGHT JOIN categories c USING (category_id)');
