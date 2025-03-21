@@ -148,23 +148,6 @@ describe('QueryBuilder', () => {
     });
   });
 
-  describe('WHERE Clause', () => {
-    it('should add simple WHERE condition', () => {
-      const query = new QueryBuilder().select('id').from('users').where('id = 1').getQuery();
-      expect(query).toBe('SELECT id FROM users WHERE id = 1');
-    });
-
-    it('should add AND condition', () => {
-      const query = new QueryBuilder().select('id').from('users').where('id = 1').andWhere('name = "John"').getQuery();
-      expect(query).toBe('SELECT id FROM users WHERE id = 1 AND name = "John"');
-    });
-
-    it('should add OR condition', () => {
-      const query = new QueryBuilder().select('id').from('users').where('id = 1').orWhere('name = "John"').getQuery();
-      expect(query).toBe('SELECT id FROM users WHERE id = 1 OR name = "John"');
-    });
-  });
-
   describe('JOINs', () => {
     let queryBuilder: QueryBuilder;
 
@@ -533,6 +516,77 @@ describe('QueryBuilder', () => {
         const query = queryBuilder.getQuery();
         expect(query).toContain('RIGHT JOIN categories c USING (category_id)');
       });
+    });
+  });
+
+  describe('WHERE Clause', () => {
+    it('should add simple WHERE condition', () => {
+      const query = new QueryBuilder().select('id').from('users').where('id = 1').getQuery();
+      expect(query).toBe('SELECT id FROM users WHERE id = 1');
+    });
+
+    it('should add AND condition', () => {
+      const query = new QueryBuilder().select('id').from('users').where('id = 1').andWhere('name = "John"').getQuery();
+      expect(query).toBe('SELECT id FROM users WHERE id = 1 AND name = "John"');
+    });
+
+    it('should add OR condition', () => {
+      const query = new QueryBuilder().select('id').from('users').where('id = 1').orWhere('name = "John"').getQuery();
+      expect(query).toBe('SELECT id FROM users WHERE id = 1 OR name = "John"');
+    });
+  });
+
+  describe('orderBy', () => {
+    it('should initialize ORDER BY with a single column and order', () => {
+      const query = queryBuilder.orderBy('name', 'ASC');
+      expect(query['sorting']).toEqual([{ column: 'name', order: 'ASC' }]);
+    });
+
+    it('should replace existing ORDER BY with new column and order', () => {
+      queryBuilder.orderBy('name', 'ASC');
+      const query = queryBuilder.orderBy('id', 'DESC');
+      expect(query['sorting']).toEqual([{ column: 'id', order: 'DESC' }]);
+    });
+
+    it('should default to ASC if no order is specified', () => {
+      const query = queryBuilder.orderBy('name');
+      expect(query['sorting']).toEqual([{ column: 'name', order: 'ASC' }]);
+    });
+
+    it('should handle values correctly', () => {
+      const query = queryBuilder.orderBy('name', 'DESC');
+      expect(query['sorting']).toEqual([{ column: 'name', order: 'DESC' }]);
+    });
+  });
+
+  describe('addOrderBy', () => {
+    it('should add an additional sorting condition without replacing existing ones', () => {
+      queryBuilder.orderBy('name', 'ASC');
+      const query = queryBuilder.addOrderBy('id', 'DESC');
+      expect(query['sorting']).toEqual([
+        { column: 'name', order: 'ASC' },
+        { column: 'id', order: 'DESC' }
+      ]);
+    });
+
+    it('should not add duplicate sorting conditions for the same column', () => {
+      queryBuilder.orderBy('name', 'ASC');
+      const query = queryBuilder.addOrderBy('name', 'DESC');
+      expect(query['sorting']).toEqual([{ column: 'name', order: 'ASC' }]);
+    });
+  });
+
+  describe('createOrderByClause', () => {
+    it('should generate the ORDER BY clause correctly', () => {
+      queryBuilder.orderBy('name', 'ASC').addOrderBy('id', 'DESC');
+      const orderByClause = queryBuilder['createOrderByClause']();
+      expect(orderByClause).toBe(' ORDER BY name ASC, id DESC');
+    });
+
+    it('should return an empty string if no sorting conditions are specified', () => {
+      queryBuilder = new QueryBuilder();
+
+      expect(queryBuilder['createOrderByClause']()).toBe('');
     });
   });
 });

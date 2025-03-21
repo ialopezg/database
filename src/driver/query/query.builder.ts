@@ -2,6 +2,7 @@ type QueryType = 'select' | 'insert' | 'update' | 'delete';
 type JoinType = 'inner' | 'left' | 'right' | 'cross';
 type JoinConditionType = 'on' | 'using' | 'natural';
 type ConditionType = 'simple' | 'and' | 'or';
+type SortType = 'ASC' | 'DESC';
 
 interface FromBlock {
   entity: Function | string;
@@ -21,6 +22,11 @@ interface WhereBlock {
   condition: string;
 }
 
+interface OrderByBlock {
+  column: string;
+  order: SortType;
+}
+
 /**
  * @class QueryBuilder
  * A query builder class that facilitates the construction of SQL queries.
@@ -31,6 +37,7 @@ export class QueryBuilder {
   private fromBlock: FromBlock;
   private joinBlocks: JoinBlock[] = [];
   private conditions: WhereBlock[] = [];
+  private sorting: OrderByBlock[] = [];
 
   constructor(public readonly getTableNameCallback?: (entity: Function) => string) {
     this.fromBlock = { entity: '', alias: undefined };
@@ -49,7 +56,7 @@ export class QueryBuilder {
   select(...columns: string[]): this {
     this.queryType = 'select';
 
-    this.columns = Array.isArray(columns) ? [...columns] : [columns];
+    this.columns = columns;
 
     return this;
   }
@@ -274,6 +281,35 @@ export class QueryBuilder {
   }
 
   /**
+   * Initializes or replaces the ORDER BY clause with a new array of sorting conditions.
+   *
+   * @param {string} column - The name of the column to sort by.
+   * @param {SortType} [order='ASC'] - The sorting order, either 'ASC' or 'DESC'.
+   * @returns {this} The current QueryBuilder instance for method chaining.
+   */
+  orderBy(column: string, order: SortType = 'ASC'): this {
+    this.sorting = [{ column, order }];
+
+    return this;
+  }
+
+  /**
+   * Adds an ORDER BY clause to the query.
+   * If the column already exists, it won't be added again.
+   *
+   * @param {string} column - The name of the column to sort by.
+   * @param {SortType} [order='ASC'] - The sorting order, either 'ASC' or 'DESC'.
+   * @returns {this} The current QueryBuilder instance for method chaining.
+   */
+  addOrderBy(column: string, order: SortType = 'ASC'): this {
+    if (!this.sorting.some((s) => s.column === column)) {
+      this.sorting.push({ column, order });
+    }
+
+    return this;
+  }
+
+  /**
    * Generates the SQL query based on the selected query type.
    *
    * @returns {string} The generated SQL query.
@@ -292,8 +328,9 @@ export class QueryBuilder {
     const selectClause = this.createSelectClause();
     const joinClauses = this.createJoinClauses();
     const whereClause = this.createWhereClause();
+    const orderByClause = this.createOrderByClause();
 
-    return `${selectClause}${joinClauses}${whereClause}`;
+    return `${selectClause}${joinClauses}${whereClause}${orderByClause}`;
   }
 
   /**
@@ -360,6 +397,20 @@ export class QueryBuilder {
         return index === 0 ? c.condition : `${c.type.toUpperCase()} ${c.condition}`;
       })
       .join(' ')}`;
+  }
+
+  /**
+   * Generates the ORDER BY clause for the SQL query.
+   *
+   * @returns {string} The formatted ORDER BY clause.
+   * @throws {Error} If no sorting conditions are specified.
+   */
+  protected createOrderByClause(): string {
+    if (this.sorting.length === 0) {
+      return '';
+    }
+
+    return ` ORDER BY ${this.sorting.map((o) => `${o.column} ${o.order ?? 'ASC'}`).join(', ')}`;
   }
 
   /**
