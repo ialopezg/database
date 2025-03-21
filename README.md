@@ -4,27 +4,16 @@
 ![License](https://img.shields.io/github/license/ialopezg/db)
 ![Codecov](https://codecov.io/gh/ialopezg/db/branch/main/graph/badge.svg)
 
-**@ialopezg/db** is a lightweight and flexible database query builder designed for TypeScript and JavaScript
-environments.
-It provides an intuitive API for constructing SQL queries dynamically with method chaining.
-
+This library provides a simple and flexible query builder for generating SQL queries.
+It supports multiple join types and includes support for `INNER`, `LEFT`, `RIGHT`,
+`CROSS`, and `NATURAL` joins, as well as condition types like `ON`, `USING`, and `NATURAL`.
 ---
 
 ## 🚀 Features
 
-- **✅ Fluent Query Builder** – Easily construct SQL queries with a chainable API.
-- **✅ Automatic Column Deduplication** – Ensures no duplicate column selections.
-- **✅ TypeScript Support** – Fully typed for enhanced development experience.
-- **✅ Supports CommonJS, ESM, and UMD** – Flexible module compatibility.
-- **✅ Zero Dependencies** – Optimized for performance.
-
----
-
-## 📝 TODO
-
-- **⚡ ORM Support** – Define and manage models with an object-oriented approach.
-- **⚡ Database Management** – Handle migrations and schema updates.
-- **⚡ CLI Utilities**: Automate database-related tasks.
+- **✅ Flexible Join Clauses**: Supports multiple types of joins: `INNER`, `LEFT`, `RIGHT`, `CROSS`, `NATURAL`.
+- **✅ Condition Types**: Supports `ON`, `USING`, and `NATURAL` join conditions.
+- **✅ Custom Aliases**: Supports aliases for tables in joins.
 
 ---
 
@@ -50,85 +39,65 @@ yarn add @ialopezg/db
 
 ## 🔧 Usage
 
-### Basic Example
-
 ```ts
-import { QueryBuilder } from "@ialopezg/db";
+import { QueryBuilder } from '@ialopezg/db';
 
-const query = new QueryBuilder()
-  .select('id', 'name')
+const queryBuilder = new QueryBuilder();
+
+// Building a query with INNER JOIN
+const query = queryBuilder
   .from('users')
-  .where('id = 1')
+  .innerJoin('orders', 'o')
+  .on('users.id = orders.user_id')
   .getQuery();
 
-console.log(query); // "SELECT id, name FROM users WHERE id = 1"
-```
+console.log(query); // Output: SELECT * FROM users INNER JOIN orders o ON users.id = orders.user_id
 
-### Selecting Columns
-
-```ts
-const query = new QueryBuilder()
-  .select('id', 'name')
-  .from('users');
-
-console.log(query.getQuery()); // "SELECT id, name FROM users"
-```
-
-### Adding Columns with `addColumns`
-
-```ts
-const query = new QueryBuilder()
-  .select('id')
+// Building a query with LEFT JOIN
+const query = queryBuilder
   .from('users')
-  .addColumns('name', 'email');
+  .leftJoin('orders', 'o')
+  .on('users.id = orders.user_id')
+  .getQuery();
 
-console.log(query.getQuery()); // "SELECT id, name, email FROM users"
+console.log(query); // Output: SELECT * FROM users LEFT JOIN orders o ON users.id = orders.user_id
+
+// Using USING for a JOIN condition
+const query = queryBuilder
+  .from('orders')
+  .innerJoin('products', 'p')
+  .using('product_id')
+  .getQuery();
+
+console.log(query); // Output: SELECT * FROM orders INNER JOIN products p USING (product_id)
+
+// CROSS JOIN with USING
+const query = queryBuilder
+  .from('sessions')
+  .crossJoin('users')
+  .using('session_id')
+  .getQuery();
+
+console.log(query); // Output: SELECT * FROM sessions CROSS JOIN users USING (session_id)
 ```
 
-### Avoiding Duplicate Columns
+### 🐛 Error Handling
 
+If a required condition type or criteria is missing, the library throws an error.
+
+#### Example:
 ```ts
-const query = new QueryBuilder()
-  .select('id')
-  .from('users')
-  .addColumns('id');
-
-console.log(query.getQuery()); // "SELECT id FROM users"
+// Throws error because criteria is missing
+queryBuilder
+  .leftJoin('users', 'u')
+  .using('')
+  .getQuery(); // Error: LEFT JOIN requires a condition type (ON or USING) and criteria
 ```
 
-### Using Table Aliases
+---
 
-```ts
-const query = new QueryBuilder()
-  .select('id', 'name')
-  .from('users', 'u');
-
-console.log(query.getQuery()); // "SELECT id, name FROM users u"
-```
-
-### Adding Where Conditions
-
-```ts
-const query = new QueryBuilder()
-  .select('id', 'name')
-  .from('users')
-  .where('id = 1');
-
-console.log(query.getQuery()); // "SELECT id, name FROM users WHERE id = 1"
-```
-
-### Using andWhere and orWhere
-
-```ts
-const query = new QueryBuilder()
-  .select('id', 'name')
-  .from('users')
-  .where('id = 1')
-  .andWhere('status = "active"')
-  .orWhere('role = "admin"');
-
-console.log(query.getQuery()); // "SELECT id, name FROM users WHERE id = 1 AND status = "active" OR role = "admin""
-```
+### Changelog
+For details on changes and version updates, refer to the [CHANGELOG.md](./CHANGELOG.md).
 
 ---
 

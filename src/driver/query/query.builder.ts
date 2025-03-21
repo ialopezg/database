@@ -1,24 +1,39 @@
 type QueryType = 'select' | 'insert' | 'update' | 'delete';
+type JoinType = 'inner' | 'left' | 'right' | 'cross';
+type JoinConditionType = 'on' | 'using' | 'natural';
 type ConditionType = 'simple' | 'and' | 'or';
 
-interface FromClause {
+interface FromBlock {
   entity: Function | string;
   alias?: string;
 }
 
-interface WhereClause {
+interface JoinBlock {
+  type: JoinType;
+  entity: string;
+  alias?: string;
+  conditionType?: JoinConditionType;
+  criteria?: string;
+}
+
+interface WhereBlock {
   type: ConditionType;
   condition: string;
 }
 
+/**
+ * @class QueryBuilder
+ * A query builder class that facilitates the construction of SQL queries.
+ */
 export class QueryBuilder {
   private queryType: QueryType = 'select';
   private columns: string[] = [];
-  private fromClause: FromClause;
-  private conditions: WhereClause[] = [];
+  private fromBlock: FromBlock;
+  private joinBlocks: JoinBlock[] = [];
+  private conditions: WhereBlock[] = [];
 
   constructor(public readonly getTableNameCallback?: (entity: Function) => string) {
-    this.fromClause = { entity: '', alias: undefined };
+    this.fromBlock = { entity: '', alias: undefined };
   }
 
   /**
@@ -54,9 +69,7 @@ export class QueryBuilder {
    * console.log(query.getQuery()); // SELECT id FROM users (avoiding duplicates)
    */
   addColumns(...columns: string[]): this {
-    this.columns = this.columns
-      .concat(columns)
-      .filter((value, index, self) => self.indexOf(value) === index);
+    this.columns.push(...columns.filter((col) => !this.columns.includes(col)));
 
     return this;
   }
@@ -73,7 +86,143 @@ export class QueryBuilder {
    * const query = new QueryBuilder().from(UserEntity, "u");
    */
   from(entity: Function | string, alias?: string): this {
-    this.fromClause = { entity, alias };
+    if (!entity || (typeof entity === 'string' && entity.trim() === '')) {
+      throw new Error('FROM clause requires a valid table name or entity');
+    }
+
+    this.fromBlock = { entity, alias };
+
+    return this;
+  }
+
+  /**
+   * Adds an INNER JOIN to the query.
+   *
+   * @param {string} entity - The entity (or table) to join.
+   * @param {string} [alias] - The optional alias for the join entity.
+   * @param {JoinConditionType} [conditionType] - The type of condition ('on', 'using', 'natural').
+   * @param {string} [criteria] - The condition criteria (optional).
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   *
+   * @throws {Error} If the join entity is missing.
+   * @throws {Error} If the condition requires criteria but none is provided.
+   *
+   * @example
+   * const query = new QueryBuilder().select("id").from("users").innerJoin("products",
+   * "p", "on", "users.id = products.user_id");
+   */
+  innerJoin(
+    entity: string,
+    alias?: string,
+    conditionType?: JoinConditionType,
+    criteria?: string
+  ): this {
+    if (!entity || entity.trim() === '') {
+      throw new Error('Join entity is required.');
+    }
+    if (!conditionType) {
+      throw new Error('INNER JOIN requires a condition type (ON, USING, or NATURAL)');
+    }
+    if (conditionType !== 'natural' && !criteria) {
+      throw new Error(`INNER JOIN with ${conditionType.toUpperCase()} requires criteria`);
+    }
+
+    this.joinBlocks.push({ type: 'inner', entity, alias, conditionType, criteria });
+
+    return this;
+  }
+
+  /**
+   * Adds a LEFT JOIN to the query.
+   *
+   * @param {string} entity - The entity (or table) to join.
+   * @param {string} [alias] - The optional alias for the join entity.
+   * @param {JoinConditionType} [conditionType] - The type of condition ('on', 'using', 'natural').
+   * @param {string} [criteria] - The condition criteria (optional).
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   *
+   * @throws {Error} If the join entity is missing.
+   * @throws {Error} If the condition requires criteria but none is provided.
+   *
+   * @example
+   * const query = new QueryBuilder().select("id").from("users").leftJoin("products",
+   * "p", "on", "users.id = products.user_id");
+   */
+  leftJoin(
+    entity: string,
+    alias?: string,
+    conditionType?: JoinConditionType,
+    criteria?: string
+  ): this {
+    if (!entity || entity.trim() === '') {
+      throw new Error('Join entity is required.');
+    }
+    if (!conditionType) {
+      throw new Error('LEFT JOIN requires a condition type (ON, USING, or NATURAL)');
+    }
+    if (conditionType !== 'natural' && !criteria) {
+      throw new Error(`LEFT JOIN with ${conditionType.toUpperCase()} requires criteria`);
+    }
+
+    this.joinBlocks.push({ type: 'left', entity, alias, conditionType, criteria });
+
+    return this;
+  }
+
+  /**
+   * Adds a RIGHT JOIN to the query.
+   *
+   * @param {string} entity - The entity (or table) to join.
+   * @param {string} [alias] - The optional alias for the join entity.
+   * @param {JoinConditionType} [conditionType] - The type of condition ('on', 'using', 'natural').
+   * @param {string} [criteria] - The condition criteria (optional).
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   *
+   * @throws {Error} If the join entity is missing.
+   * @throws {Error} If the condition requires criteria but none is provided.
+   *
+   * @example
+   * const query = new QueryBuilder().select("id").from("users").rightJoin("products",
+   * "p", "on", "users.id = products.user_id");
+   */
+  rightJoin(
+    entity: string,
+    alias?: string,
+    conditionType?: JoinConditionType,
+    criteria?: string
+  ): this {
+    if (!entity || entity.trim() === '') {
+      throw new Error('Join entity is required.');
+    }
+    if (!conditionType) {
+      throw new Error('RIGHT JOIN requires a condition type (ON, USING, or NATURAL)');
+    }
+    if (conditionType !== 'natural' && !criteria) {
+      throw new Error(`RIGHT JOIN with ${conditionType.toUpperCase()} requires criteria`);
+    }
+
+    this.joinBlocks.push({ type: 'right', entity, alias, conditionType, criteria });
+
+    return this;
+  }
+
+  /**
+   * Adds a CROSS JOIN to the query.
+   *
+   * @param {string} entity - The entity (or table) to join.
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   *
+   * @throws {Error} If the join entity is missing.
+   *
+   * @example
+   * const query = new QueryBuilder().select("id").from("users").crossJoin("products");
+   */
+  crossJoin(entity: string): this {
+    if (!entity || entity.trim() === '') {
+      throw new Error('Join entity is required.');
+    }
+
+    this.joinBlocks.push({ type: 'cross', entity });
 
     return this;
   }
@@ -88,12 +237,9 @@ export class QueryBuilder {
    * const query = new QueryBuilder().select("id").from("users", "u").where("u.id = 1");
    */
   where(condition: string): this {
-    if (!condition.trim()) {
-      return this;
+    if (condition?.trim()) {
+      this.conditions.push({ type: 'simple', condition });
     }
-
-    this.conditions.push({ type: 'simple', condition });
-
     return this;
   }
 
@@ -139,32 +285,70 @@ export class QueryBuilder {
    * console.log(query); // SELECT id, name FROM users u;
    */
   getQuery(): string {
+    if (!this.fromBlock.entity) {
+      throw new Error('FROM clause must be defined before generating the query');
+    }
+
     const selectClause = this.createSelectClause();
+    const joinClauses = this.createJoinClauses();
     const whereClause = this.createWhereClause();
 
-    return `${selectClause}${whereClause}`;
+    return `${selectClause}${joinClauses}${whereClause}`;
   }
 
   /**
    * Creates the SELECT clause of the query.
+   *
+   * @returns {string} The SELECT clause of the query.
    */
   protected createSelectClause(): string {
     const tableName = this.getTableName();
-
     if (this.columns.length === 0) {
       this.columns = ['*'];
     }
 
     let query = `SELECT ${this.columns.join(', ')} FROM ${tableName}`;
-    if (this.fromClause?.alias) {
-      query += ` ${this.fromClause.alias}`;
+    if (this.fromBlock?.alias) {
+      query += ` ${this.fromBlock.alias}`;
     }
 
     return query.trim();
   }
 
   /**
+   * Creates the JOIN clauses of the query.
+   *
+   * @returns {string} The JOIN clauses of the query.
+   */
+  protected createJoinClauses(): string {
+    return this.joinBlocks
+      .map((join) => {
+        if (join.type === 'cross') {
+          return ` CROSS JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''}`;
+        }
+
+        if (join.conditionType === 'natural') {
+          return ` ${join.type.toUpperCase()} NATURAL JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''}`;
+        }
+
+        if (!join.conditionType || !join.criteria) {
+          throw new Error(
+            `${join.type.toUpperCase()} JOIN requires a condition type (ON or USING) and criteria`
+          );
+        }
+
+        const formattedCriteria =
+          join.conditionType === 'using' ? `(${join.criteria})` : join.criteria;
+
+        return ` ${join.type.toUpperCase()} JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''} ${join.conditionType.toUpperCase()} ${formattedCriteria}`;
+      })
+      .join(' ');
+  }
+
+  /**
    * Creates the WHERE clause of the query.
+   *
+   * @returns {string} The WHERE clause of the query.
    */
   protected createWhereClause(): string {
     if (this.conditions.length === 0) {
@@ -172,32 +356,31 @@ export class QueryBuilder {
     }
 
     return ` WHERE ${this.conditions
-      .map((c) => {
-        // For the first condition, return it as is
-        if (c.type === 'simple') {
-          return c.condition;
-        }
-
-        // For the next conditions, prepend the appropriate AND/OR
-        return `${c.type.toUpperCase()} ${c.condition}`;
+      .map((c, index) => {
+        return index === 0 ? c.condition : `${c.type.toUpperCase()} ${c.condition}`;
       })
       .join(' ')}`;
   }
 
   /**
    * Retrieves the table name from the entity class or string.
+   *
+   * @returns {string} The table name.
+   *
+   * @throws {Error} If the table name is not specified.
    */
   protected getTableName(): string {
-    if (!this.fromClause?.entity) {
+    if (!this.fromBlock?.entity) {
       throw new Error('Table name must be specified using from()');
     }
 
-    if (typeof this.fromClause?.entity === 'function') {
+    if (typeof this.fromBlock?.entity === 'function') {
       if (!this.getTableNameCallback) {
         throw new Error('getTableNameCallback is required to resolve entity names');
       }
-      return this.getTableNameCallback(this.fromClause.entity);
+      return this.getTableNameCallback(this.fromBlock.entity);
     }
-    return this.fromClause?.entity ?? '';
+
+    return this.fromBlock?.entity ?? '';
   }
 }
