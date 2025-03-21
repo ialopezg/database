@@ -24,7 +24,7 @@ interface WhereBlock {
 
 interface OrderByBlock {
   column: string;
-  order: SortType;
+  order?: SortType;
 }
 
 /**
@@ -430,6 +430,6 @@ export class QueryBuilder {
       return this.getTableNameCallback(this.fromBlock.entity);
     }
 
-    return this.fromBlock?.entity ?? '';
+    return this.fromBlock.entity;
   }
 }
