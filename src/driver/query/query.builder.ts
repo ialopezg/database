@@ -1,5 +1,5 @@
 type QueryType = 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE';
-type JoinType = 'INNER' | 'LEFT' | 'RIGHT' | 'CROSS';
+type JoinType = 'INNER' | 'LEFT' | 'RIGHT' | 'CROSS' | 'NATURAL';
 type JoinConditionType = 'ON' | 'USING' | 'NATURAL';
 type ConditionType = 'SIMPLE' | 'AND' | 'OR';
 type SortType = 'ASC' | 'DESC';
@@ -10,7 +10,7 @@ interface FromBlock {
 }
 
 interface JoinBlock {
-  type: JoinType;
+  joinType: JoinType;
   entity: string;
   alias?: string;
   conditionType?: JoinConditionType;
@@ -38,6 +38,8 @@ export class QueryBuilder {
   private joinBlocks: JoinBlock[] = [];
   private conditions: WhereBlock[] = [];
   private sorting: OrderByBlock[] = [];
+  private limit: number = -1;
+  private offset: number = -1;
 
   constructor(public readonly getTableNameCallback?: (entity: Function) => string) {
     this.fromBlock = { entity: '', alias: undefined };
@@ -124,19 +126,7 @@ export class QueryBuilder {
     conditionType?: JoinConditionType,
     criteria?: string
   ): this {
-    if (!entity || entity.trim() === '') {
-      throw new Error('Join entity is required.');
-    }
-    if (!conditionType) {
-      throw new Error('INNER JOIN requires a condition type (ON, USING, or NATURAL)');
-    }
-    if (conditionType !== 'NATURAL' && !criteria) {
-      throw new Error(`INNER JOIN with ${conditionType} requires criteria`);
-    }
-
-    this.joinBlocks.push({ type: 'INNER', entity, alias, conditionType, criteria });
-
-    return this;
+    return this.addJoin('INNER', entity, alias, conditionType, criteria);
   }
 
   /**
@@ -161,19 +151,7 @@ export class QueryBuilder {
     conditionType?: JoinConditionType,
     criteria?: string
   ): this {
-    if (!entity || entity.trim() === '') {
-      throw new Error('Join entity is required.');
-    }
-    if (!conditionType) {
-      throw new Error('LEFT JOIN requires a condition type (ON, USING, or NATURAL)');
-    }
-    if (conditionType !== 'NATURAL' && !criteria) {
-      throw new Error(`LEFT JOIN with ${conditionType} requires criteria`);
-    }
-
-    this.joinBlocks.push({ type: 'LEFT', entity, alias, conditionType, criteria });
-
-    return this;
+    return this.addJoin('LEFT', entity, alias, conditionType, criteria);
   }
 
   /**
@@ -198,19 +176,7 @@ export class QueryBuilder {
     conditionType?: JoinConditionType,
     criteria?: string
   ): this {
-    if (!entity || entity.trim() === '') {
-      throw new Error('Join entity is required.');
-    }
-    if (!conditionType) {
-      throw new Error('RIGHT JOIN requires a condition type (ON, USING, or NATURAL)');
-    }
-    if (conditionType !== 'NATURAL' && !criteria) {
-      throw new Error(`RIGHT JOIN with ${conditionType} requires criteria`);
-    }
-
-    this.joinBlocks.push({ type: 'RIGHT', entity, alias, conditionType, criteria });
-
-    return this;
+    return this.addJoin('RIGHT', entity, alias, conditionType, criteria);
   }
 
   /**
@@ -225,13 +191,21 @@ export class QueryBuilder {
    * const query = new QueryBuilder().select("id").from("users").crossJoin("products");
    */
   crossJoin(entity: string): this {
-    if (!entity || entity.trim() === '') {
-      throw new Error('Join entity is required.');
-    }
+    return this.addJoin('CROSS', entity);
+  }
 
-    this.joinBlocks.push({ type: 'CROSS', entity });
-
-    return this;
+  /**
+   * Adds a NATURAL JOIN to the query.
+   *
+   * @param {string} entity - The entity (or table) to join.
+   * @param {string} [alias] - The optional alias for the join entity.
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   *
+   * @example
+   * const query = new QueryBuilder().select("id").from("users").naturalJoin("products");
+   */
+  naturalJoin(entity: string, alias?: string): this {
+    return this.addJoin('NATURAL', entity, alias);
   }
 
   /**
@@ -244,10 +218,7 @@ export class QueryBuilder {
    * const query = new QueryBuilder().select("id").from("users", "u").where("u.id = 1");
    */
   where(condition: string): this {
-    if (condition?.trim()) {
-      this.conditions.push({ type: 'SIMPLE', condition });
-    }
-    return this;
+    return this.addWhereCondition(condition);
   }
 
   /**
@@ -260,9 +231,7 @@ export class QueryBuilder {
    * const query = new QueryBuilder().select("id").from("users", "u").andWhere("u.id = 1");
    */
   andWhere(condition: string): this {
-    this.conditions.push({ type: 'AND', condition });
-
-    return this;
+    return this.addWhereCondition(condition, 'AND');
   }
 
   /**
@@ -275,9 +244,7 @@ export class QueryBuilder {
    * const query = new QueryBuilder().select("id").from("users", "u").orWhere("u.id = 1");
    */
   orWhere(condition: string): this {
-    this.conditions.push({ type: 'OR', condition });
-
-    return this;
+    return this.addWhereCondition(condition, 'OR');
   }
 
   /**
@@ -310,6 +277,30 @@ export class QueryBuilder {
   }
 
   /**
+   * Sets the limit of rows returned by the query.
+   *
+   * @param {number} value - The limit to apply to the query.
+   * @returns {this} The current QueryBuilder instance for method chaining.
+   */
+  setLimit(value: number): this {
+    this.limit = value;
+
+    return this;
+  }
+
+  /**
+   * Sets the offset of rows returned by the query.
+   *
+   * @param {number} value - The offset to apply to the query.
+   * @returns {this} The current QueryBuilder instance for method chaining.
+   */
+  setOffset(value: number): this {
+    this.offset = value;
+
+    return this;
+  }
+
+  /**
    * Generates the SQL query based on the selected query type.
    *
    * @returns {string} The generated SQL query.
@@ -329,8 +320,10 @@ export class QueryBuilder {
     const joinClauses = this.createJoinClauses();
     const whereClause = this.createWhereClause();
     const orderByClause = this.createOrderByClause();
+    const limitClause = this.createLimitClause();
+    const offsetClause = this.createOffsetClause();
 
-    return `${selectClause}${joinClauses}${whereClause}${orderByClause}`;
+    return `${selectClause}${joinClauses ? ` ${joinClauses}` : ''}${whereClause}${orderByClause}${limitClause}${offsetClause}`.trim();
   }
 
   /**
@@ -360,22 +353,20 @@ export class QueryBuilder {
   protected createJoinClauses(): string {
     return this.joinBlocks
       .map((join) => {
-        if (join.type === 'CROSS') {
-          return ` ${join.type} JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''}`;
+        if (join.joinType === 'CROSS') {
+          return `${join.joinType} JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''}`;
         }
 
-        if (join.conditionType === 'NATURAL') {
-          return ` ${join.type} NATURAL JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''}`;
-        }
-
-        if (!join.conditionType || !join.criteria) {
-          throw new Error(`${join.type} JOIN requires a condition type (ON or USING) and criteria`);
+        if (join.joinType === 'NATURAL') {
+          return `${join.joinType} JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''}`;
         }
 
         const formattedCriteria =
           join.conditionType === 'USING' ? `(${join.criteria})` : join.criteria;
 
-        return ` ${join.type} JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''} ${join.conditionType} ${formattedCriteria}`;
+        return `${join.joinType} JOIN ${join.entity}${join.alias ? ` ${join.alias}` : ''} ${
+          join.conditionType ? join.conditionType : ''
+        } ${formattedCriteria ? formattedCriteria : ''}`.trim();
       })
       .join(' ');
   }
@@ -412,6 +403,32 @@ export class QueryBuilder {
   }
 
   /**
+   * @protected
+   * Creates the LIMIT clause for the query, if a limit is set.
+   *
+   * @returns {string} The LIMIT clause of the query, or undefined if no limit is set.
+   */
+  protected createLimitClause(): string {
+    if (this.limit === -1) {
+      return '';
+    }
+    return ` LIMIT ${this.limit}`;
+  }
+
+  /**
+   * @protected
+   * Creates the OFFSET clause for the query, if an offset is set.
+   *
+   * @returns {string} The OFFSET clause of the query, or undefined if no offset is set.
+   */
+  protected createOffsetClause(): string {
+    if (this.offset === -1) {
+      return '';
+    }
+    return ` OFFSET ${this.offset}`;
+  }
+
+  /**
    * Retrieves the table name from the entity class or string.
    *
    * @returns {string} The table name.
@@ -423,7 +440,7 @@ export class QueryBuilder {
       throw new Error('Table name must be specified using from()');
     }
 
-    if (typeof this.fromBlock?.entity === 'function') {
+    if (typeof this.fromBlock.entity === 'function') {
       if (!this.getTableNameCallback) {
         throw new Error('getTableNameCallback is required to resolve entity names');
       }
@@ -431,5 +448,34 @@ export class QueryBuilder {
     }
 
     return this.fromBlock.entity;
+  }
+
+  private addJoin(
+    joinType: JoinType,
+    entity: string,
+    alias?: string,
+    conditionType?: JoinConditionType,
+    criteria?: string
+  ): this {
+    if (!entity || entity.trim() === '') {
+      throw new Error('Join entity is required');
+    }
+    if (conditionType && ['ON', 'USING'].includes(conditionType) && !criteria) {
+      throw new Error(`${joinType} JOIN requires a condition criteria when using ${conditionType}`);
+    }
+
+    this.joinBlocks.push({ joinType, entity, alias, conditionType, criteria });
+
+    return this;
+  }
+
+  private addWhereCondition(condition: string, type: ConditionType = 'SIMPLE'): this {
+    if (!condition.trim()) {
+      throw new Error('WHERE condition cannot be empty');
+    }
+
+    this.conditions.push({ type, condition });
+
+    return this;
   }
 }
