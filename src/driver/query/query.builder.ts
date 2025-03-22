@@ -27,6 +27,11 @@ interface OrderByBlock {
   order?: SortType;
 }
 
+interface Parameter {
+  name: string;
+  value: string | number | boolean | Date;
+}
+
 /**
  * @class QueryBuilder
  * A query builder class that facilitates the construction of SQL queries.
@@ -42,6 +47,7 @@ export class QueryBuilder {
   private orderByClause: OrderByBlock[] = [];
   private limitClause: number = -1;
   private offsetClause: number = -1;
+  private parameters: Map<string, string | number | boolean> = new Map();
 
   constructor(public readonly getTableNameCallback?: (entity: Function) => string) {
     this.fromClause = { entity: '', alias: undefined };
@@ -381,6 +387,55 @@ export class QueryBuilder {
   }
 
   /**
+   * Sets a named parameter for use in the query.
+   *
+   * @param {Parameter} param - The parameter object containing the name and value.
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   *
+   * @throws {Error} If the parameter name is empty.
+   *
+   * @example
+   * const query = new QueryBuilder().setParameter({ name: "id", value: 10 });
+   */
+  setParameter(param: Parameter): this {
+    if (!param.name.startsWith(':')) {
+      param.name = `:${param.name}`;
+    }
+
+    if (!/^:[a-zA-Z_][a-zA-Z0-9_]*$/.test(param.name)) {
+      throw new Error(
+        `Invalid parameter name '${param.name}'. Use alphanumeric characters and underscores.`
+      );
+    }
+
+    this.parameters.set(param.name, this.formatValue(param.value));
+
+    return this;
+  }
+
+  /**
+   * Sets multiple named parameters for use in the query.
+   *
+   * @param {Parameter[]} params - An array of parameter objects.
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   *
+   * @throws {Error} If any parameter name is empty.
+   *
+   * @example
+   * const query = new QueryBuilder().setParameters([
+   *   { name: "id", value: 10 },
+   *   { name: "active", value: true }
+   * ]);
+   */
+  setParameters(params: Parameter[]): this {
+    for (const param of params) {
+      this.setParameter(param);
+    }
+
+    return this;
+  }
+
+  /**
    * Generates the SQL query based on the selected query type.
    *
    * @returns {string} The generated SQL query.
@@ -407,11 +462,13 @@ export class QueryBuilder {
     const groupByClause = this.createGroupByClause();
     const havingClause = this.createHavingClause();
 
-    return `${selectClause}${joinClauses ? ` ${joinClauses}` : ''}${
+    const queryStr = `${selectClause}${joinClauses ? ` ${joinClauses}` : ''}${
       whereClause ? ` ${whereClause}` : ''
     }${groupByClause ? ` ${groupByClause}` : ''}${
       havingClause ? ` ${havingClause}` : ''
     }${orderByClause}${limitClause}${offsetClause}`.trim();
+
+    return this.replaceParameters(queryStr);
   }
 
   /**
@@ -543,6 +600,20 @@ export class QueryBuilder {
   }
 
   /**
+   * Replaces named parameters in the query string with their corresponding values.
+   * Named parameters are replaced with `:paramName` format.
+   * @param queryStr The SQL query string with placeholders for parameters.
+   * @returns The query string with replaced parameter values.
+   */
+  protected replaceParameters(queryStr: string): string {
+    this.parameters.forEach((value, key) => {
+      queryStr = queryStr.replace(key, value.toString());
+    });
+
+    return queryStr;
+  }
+
+  /**
    * Retrieves the table name from the entity class or string.
    *
    * @returns {string} The table name.
@@ -617,6 +688,15 @@ export class QueryBuilder {
     }
 
     return this;
+  }
+
+  private formatValue(value: string | number | boolean | Date): string {
+    if (typeof value === 'string') {
+      return `'${value}'`;
+    } else if (value instanceof Date) {
+      return `'${value.toISOString()}'`;
+    }
+    return value.toString();
   }
 
   private validateGroupBy(): void {

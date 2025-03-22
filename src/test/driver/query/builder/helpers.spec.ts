@@ -175,8 +175,37 @@ describe('QueryBuilder - Helpers', () => {
   describe('validateGroupByColumnsInput', () => {
     it('should generate the ORDER BY clause correctly', () => {
       expect(
-        () => queryBuilder['validateGroupByColumnsInput']([])
+        () => queryBuilder['validateGroupByColumnsInput']([]),
       ).toThrow('GROUP BY requires at least one non-empty column');
+    });
+  });
+
+  describe('replaceParameters', () => {
+    it('should replace named parameters correctly', () => {
+      // Set parameters
+      queryBuilder.setParameter({ name: ':id', value: 1 });
+      queryBuilder.setParameter({ name: ':name', value: 'John' });
+
+      // Test the query
+      const query = 'SELECT * FROM users WHERE id = :id AND name = :name';
+      const result = queryBuilder['replaceParameters'](query);
+
+      // Expect the named parameters to be replaced with their values
+      expect(result).toBe(`SELECT * FROM users WHERE id = 1 AND name = 'John'`);
+    });
+  });
+
+  describe('formatValue', () => {
+    it('should replace named parameters correctly', () => {
+      // Set parameters
+      const param = { name: ':date', value: new Date('2025-03-21') };
+      queryBuilder.setParameter(param);
+
+      // Test the query
+      const result = queryBuilder['formatValue'](param.value);
+
+      // Expect the named parameters to be replaced with their values
+      expect(result).toBe(`'2025-03-21T00:00:00.000Z'`);
     });
   });
 });

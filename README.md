@@ -16,14 +16,14 @@ queries in a clean and intuitive manner.
 
 ## 🚀 Features
 
-- **Select**: Define the columns to be selected.
-- **From**: Specify the table or entity to query from.
-- **Joins**: Support for various types of joins (`INNER`, `LEFT`, `RIGHT`, `CROSS`, `NATURAL`).
-- **Where**: Add conditions using `AND` or `OR`.
-- **Group By**: Group results based on one or more columns.
-- **Order By**: Specify sorting conditions.
-- **Limit & Offset**: Define limits and offsets for pagination.
-- **Method Chaining**: All methods return the `QueryBuilder` instance for fluent chaining.
+- **✅ Fluent API**: Chainable methods for easy query construction.
+- **✅ Named Parameters**: Prevent SQL injection by binding named parameters.
+- **✅ Select Queries**: Build flexible SELECT statements with column and table aliasing.
+- **✅ Joins**: Support for INNER, LEFT, RIGHT, CROSS, and NATURAL joins.
+- **✅ Where Conditions**: Add WHERE, AND, and OR conditions dynamically.
+- **✅ Grouping & Aggregation**: GROUP BY, HAVING, and aggregate functions.
+- **✅ Sorting & Pagination**: ORDER BY, LIMIT, and OFFSET support.
+- **✅ Error Handling**: Ensures correct query syntax and missing criteria validation.
 
 ## 📦 Installation
 
@@ -33,43 +33,33 @@ npm install @ialopezg/db
 
 ## 🔧 Usage
 
-### Select Columns
+### Selecting Columns
 
 ```typescript
 const query = new QueryBuilder().select("id", "name");
 console.log(query.getQuery()); // SELECT id, name FROM table
 ```
 
-### From Table
+### Defining the Table
 
 ```typescript
 const query = new QueryBuilder().from("users");
 console.log(query.getQuery()); // SELECT * FROM users
 ```
 
-### Joins
+### Using Joins
 
 ```typescript
 const query = new QueryBuilder()
   .select("id", "name")
-  .from("users")
-  .innerJoin("products", "p", "on", "users.id = products.user_id");
+  .from("users", "u")
+  .innerJoin("orders", "o", "on", "u.id = o.user_id");
 
-console.log(query.getQuery()); // SELECT id, name FROM users INNER JOIN products p ON users.id = products.user_id
+console.log(query.getQuery());
+// SELECT id, name FROM users u INNER JOIN orders o ON u.id = o.user_id
 ```
 
-### Where Conditions
-
-```typescript
-const query = new QueryBuilder()
-  .select("id", "name")
-  .from("users")
-  .where("age > 30");
-
-console.log(query.getQuery()); // SELECT id, name FROM users WHERE age > 30
-```
-
-### AND / OR Conditions
+### Adding Conditions
 
 ```typescript
 const query = new QueryBuilder()
@@ -78,33 +68,24 @@ const query = new QueryBuilder()
   .where("age > 30")
   .andWhere("status = 'active'");
 
-console.log(query.getQuery()); // SELECT id, name FROM users WHERE age > 30 AND status = 'active'
+console.log(query.getQuery());
+// SELECT id, name FROM users WHERE age > 30 AND status = 'active'
 ```
 
-### Group By
+### Grouping and Aggregation
 
 ```typescript
 const query = new QueryBuilder()
   .select("category", "COUNT(id)")
   .from("products")
-  .groupBy("category");
+  .groupBy("category")
+  .having("COUNT(id) > 10");
 
-console.log(query.getQuery()); // SELECT category, COUNT(id) FROM products GROUP BY category
+console.log(query.getQuery());
+// SELECT category, COUNT(id) FROM products GROUP BY category HAVING COUNT(id) > 10
 ```
 
-#### Adding Group By Columns
-
-```typescript
-const query = new QueryBuilder()
-  .select('category', 'sub_category', 'COUNT(id)')
-  .from('products')
-  .groupBy('category')
-  .addGroupBy('sub_category');
-
-console.log(query.getQuery()); // SELECT category, sub_category, COUNT(id) FROM products GROUP BY category, sub_category
-```
-
-### Order By
+### Ordering Results
 
 ```typescript
 const query = new QueryBuilder()
@@ -112,10 +93,11 @@ const query = new QueryBuilder()
   .from("users")
   .orderBy("age", "ASC");
 
-console.log(query.getQuery()); // SELECT id, name FROM users ORDER BY age ASC
+console.log(query.getQuery());
+// SELECT id, name FROM users ORDER BY age ASC
 ```
 
-### Limit and Offset
+### Pagination with Limit & Offset
 
 ```typescript
 const query = new QueryBuilder()
@@ -124,10 +106,43 @@ const query = new QueryBuilder()
   .setLimit(10)
   .setOffset(20);
 
-console.log(query.getQuery()); // SELECT id, name FROM users LIMIT 10 OFFSET 20
+console.log(query.getQuery());
+// SELECT id, name FROM users LIMIT 10 OFFSET 20
 ```
 
-## 🔥 API
+## 🔥 Parameter Binding
+
+### Setting a Single Named Parameter
+
+```typescript
+const query = new QueryBuilder()
+  .select("id", "name")
+  .from("users")
+  .where("id = :id")
+  .setParameter({ name: ":id", value: 10 });
+
+console.log(query.getQuery());
+// SELECT id, name FROM users WHERE id = 10
+```
+
+### Setting Multiple Named Parameters
+
+```typescript
+const query = new QueryBuilder()
+  .select("id", "name")
+  .from("users")
+  .where("id = :id")
+  .andWhere("status = :status")
+  .setParameters([
+    { name: ":id", value: 10 },
+    { name: ":status", value: "active" }
+  ]);
+
+console.log(query.getQuery());
+// SELECT id, name FROM users WHERE id = 10 AND status = 'active'
+```
+
+## 🛠 API
 
 ### `select(...columns: string[]): this`
 
@@ -224,6 +239,23 @@ Sets the `OFFSET` for the query, allowing for pagination.
 ### `getQuery(): string`
 
 Generate the SQL query based on the specified conditions.
+
+### `setParameter(param: Parameter): this`
+
+Set a single named parameter for the query.
+
+query.setParameter({ name: ":id", value: 42 });
+
+### `setParameters(params: Parameter[]): this`
+
+Sets multiple named parameters at once.
+
+```typescript
+query.setParameters([
+  { name: ":id", value: 10 },
+  { name: ":status", value: "active" }
+]);
+```
 
 #### Example: Full Query
 
