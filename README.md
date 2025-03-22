@@ -171,13 +171,15 @@ Adds a `NATURAL JOIN` to the query.
 
 Adds a `WHERE` condition to the query.
 
+> Replace any existing `WHERE` columns.
+
 ### `andWhere(condition: string): this`
 
-Adds an `AND` condition to the query.
+Adds an `AND` condition to the WHERE clause of the query.
 
 ### `orWhere(condition: string): this`
 
-Adds an `OR` condition to the query.
+Adds an `OR` condition to the WHERE clause of the query.
 
 ### `groupBy(columns: string | string[]): this`
 
@@ -188,6 +190,20 @@ Define the GROUP BY clause with one or more columns.
 ### `addGroupBy(columns: string | string[]): this`
 
 Adds additional columns to the GROUP BY clause, ensuring no duplicates.
+
+### `having(condition: string): this`
+
+Adds a `HAVING` condition to the query.
+
+> Replace any existing `HAVING` columns.
+
+### `andHaving(columns: string | string[]): this`
+
+Adds an `AND` condition to the HAVING clause of the query.
+
+### `orHaving(columns: string | string[]): this`
+
+Adds an `OR` condition to the HAVING clause of the query.
 
 ### `orderBy(column: string, order: SortType = 'ASC'): this`
 

@@ -37,7 +37,8 @@ export class QueryBuilder {
   private fromClause: FromBlock;
   private joinClauses: JoinBlock[] = [];
   private whereClause: WhereBlock[] = [];
-  private groupByColumns: string[] = [];
+  private groupByClause: string[] = [];
+  private havingClause: WhereBlock[] = [];
   private orderByClause: OrderByBlock[] = [];
   private limitClause: number = -1;
   private offsetClause: number = -1;
@@ -219,7 +220,7 @@ export class QueryBuilder {
    * const query = new QueryBuilder().select("id").from("users", "u").where("u.id = 1");
    */
   where(condition: string): this {
-    return this.addWhereCondition(condition);
+    return this.addWhereCondition(condition, 'SIMPLE', true);
   }
 
   /**
@@ -258,7 +259,7 @@ export class QueryBuilder {
    */
   groupBy(...columns: string[]): this {
     this.validateGroupByColumnsInput(columns);
-    this.groupByColumns = columns;
+    this.groupByClause = columns;
 
     return this;
   }
@@ -274,12 +275,56 @@ export class QueryBuilder {
   addGroupBy(...columns: string[]): this {
     this.validateGroupByColumnsInput(columns);
     for (const column of columns) {
-      if (!this.groupByColumns.includes(column)) {
-        this.groupByColumns.push(column);
+      if (!this.groupByClause.includes(column)) {
+        this.groupByClause.push(column);
       }
     }
 
     return this;
+  }
+
+  /**
+   * Adds a HAVING clause to the query with a single condition.
+   * Throws an error if no SELECT columns have been specified yet.
+   *
+   * @param {string} condition - The condition for the HAVING clause.
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   *
+   * @example
+   * const query = new QueryBuilder().having("COUNT(id) > 5");
+   */
+  having(condition: string): this {
+    return this.addHavingCondition(condition, 'SIMPLE', true);
+  }
+
+  /**
+   * Adds a condition to the existing HAVING clause with AND.
+   * This method does not replace the existing condition but appends a new condition.
+   * Throws an error if no SELECT columns have been specified yet.
+   *
+   * @param {string} condition - The condition to add to the HAVING clause.
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   *
+   * @example
+   * const query = new QueryBuilder().select(["id"]).from("users").addHaving("COUNT(id) > 10");
+   */
+  andHaving(condition: string): this {
+    return this.addHavingCondition(condition, 'AND');
+  }
+
+  /**
+   * Adds a condition to the existing HAVING clause with OR.
+   * This method does not replace the existing condition but appends a new condition with OR.
+   * Throws an error if no SELECT columns have been specified yet.
+   *
+   * @param {string} condition - The condition to add to the HAVING clause with OR.
+   * @returns {this} The instance of `QueryBuilder` for method chaining.
+   *
+   * @example
+   * const query = new QueryBuilder().select(["id"]).from("users").orHaving("COUNT(id) > 10");
+   */
+  orHaving(condition: string): this {
+    return this.addHavingCondition(condition, 'OR');
   }
 
   /**
@@ -360,9 +405,12 @@ export class QueryBuilder {
     const limitClause = this.createLimitClause();
     const offsetClause = this.createOffsetClause();
     const groupByClause = this.createGroupByClause();
+    const havingClause = this.createHavingClause();
 
-    return `${selectClause}${joinClauses ? ` ${joinClauses}` : ''}${whereClause}${
-      groupByClause ? ` ${groupByClause}` : ''
+    return `${selectClause}${joinClauses ? ` ${joinClauses}` : ''}${
+      whereClause ? ` ${whereClause}` : ''
+    }${groupByClause ? ` ${groupByClause}` : ''}${
+      havingClause ? ` ${havingClause}` : ''
     }${orderByClause}${limitClause}${offsetClause}`.trim();
   }
 
@@ -421,7 +469,7 @@ export class QueryBuilder {
       return '';
     }
 
-    return ` WHERE ${this.whereClause
+    return `WHERE ${this.whereClause
       .map((c, index) => {
         return index === 0 ? c.condition : `${c.type} ${c.condition}`;
       })
@@ -434,7 +482,24 @@ export class QueryBuilder {
    * @returns {string} The GROUP BY clause of the query.
    */
   protected createGroupByClause(): string {
-    return this.groupByColumns.length > 0 ? `GROUP BY ${this.groupByColumns.join(', ')}` : '';
+    return this.groupByClause.length > 0 ? `GROUP BY ${this.groupByClause.join(', ')}` : '';
+  }
+
+  /**
+   * Creates the HAVING clause of the query.
+   *
+   * @returns {string} The WHERE clause of the query.
+   */
+  protected createHavingClause(): string {
+    if (this.havingClause.length === 0) {
+      return '';
+    }
+
+    return `HAVING ${this.havingClause
+      .map((c, index) => {
+        return index === 0 ? c.condition : `${c.type} ${c.condition}`;
+      })
+      .join(' ')}`;
   }
 
   /**
@@ -518,18 +583,44 @@ export class QueryBuilder {
     return this;
   }
 
-  private addWhereCondition(condition: string, type: ConditionType = 'SIMPLE'): this {
+  private addHavingCondition(
+    condition: string,
+    type: ConditionType = 'SIMPLE',
+    replace = false
+  ): this {
+    if (!condition.trim()) {
+      throw new Error('HAVING condition cannot be empty');
+    }
+
+    if (replace) {
+      this.havingClause = [{ type, condition }];
+    } else {
+      this.havingClause.push({ type, condition });
+    }
+
+    return this;
+  }
+
+  private addWhereCondition(
+    condition: string,
+    type: ConditionType = 'SIMPLE',
+    replace = false
+  ): this {
     if (!condition.trim()) {
       throw new Error('WHERE condition cannot be empty');
     }
 
-    this.whereClause.push({ type, condition });
+    if (replace) {
+      this.whereClause = [{ type, condition }];
+    } else {
+      this.whereClause.push({ type, condition });
+    }
 
     return this;
   }
 
   private validateGroupBy(): void {
-    if (this.groupByColumns.length === 0) {
+    if (this.groupByClause.length === 0) {
       return;
     }
 
@@ -540,7 +631,7 @@ export class QueryBuilder {
     const nonAggregateColumns = this.columns.filter((col) => !isAggregateFunction(col));
 
     for (const col of nonAggregateColumns) {
-      if (!this.groupByColumns.includes(col)) {
+      if (!this.groupByClause.includes(col)) {
         throw new Error(
           `Column "${col}" must be included in GROUP BY clause or used in an aggregate function.`
         );
