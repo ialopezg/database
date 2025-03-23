@@ -1,3 +1,4 @@
+import { NamingStrategy } from '../../strategies';
 import { ColumnOptions } from '../options';
 import { ColumnType } from '../options/column-type.enum';
 import { PropertyMetadata } from './property.metadata';
@@ -30,6 +31,7 @@ export class ColumnMetadata extends PropertyMetadata {
   private readonly _columnDefinition: string;
   private readonly _comment: string;
   private readonly _oldColumnName: string;
+  namingStrategy?: NamingStrategy;
 
   /**
    * Constructs a `ColumnMetadata` object.
@@ -68,8 +70,11 @@ export class ColumnMetadata extends PropertyMetadata {
     this.validateColumnOptions();
   }
 
-  /** @returns The column name. */
+  /** @returns The column name, modified by the naming strategy if available. */
   get name(): string {
+    if (this.namingStrategy) {
+      return this.namingStrategy.columnName(this.target.name);
+    }
     return this._name;
   }
 
@@ -132,6 +137,7 @@ export class ColumnMetadata extends PropertyMetadata {
    * Resolves the appropriate column type from the provided type.
    *
    * @param type - The type provided in `ColumnOptions`.
+   * It can be a constructor function or a string.
    * @returns The resolved `ColumnType`.
    * @throws Error if the type is unsupported.
    */
