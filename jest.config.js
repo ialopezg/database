@@ -14,4 +14,8 @@ export default {
     '!**/tests/**',
   ],
   coverageProvider: 'v8',
+  moduleNameMapper: {
+    '^mysql$': '<rootDir>/src/__mocks__/mysql.js',
+  },
+  moduleDirectories: ['node_modules', '<rootDir>/src/__mocks__'],
 };
