@@ -6,6 +6,12 @@ export default {
   clearMocks: true,
   collectCoverage: true,
   coverageDirectory: 'coverage',
-  collectCoverageFrom: ['src/**/*.{ts,js}', '!**/node_modules/**', '!**/vendor/**', '!**/dist/**', '!**/tests/**'],
+  collectCoverageFrom: [
+    'src/**/*.{ts,js}',
+    '!**/node_modules/**',
+    '!**/vendor/**',
+    '!**/dist/**',
+    '!**/tests/**',
+  ],
   coverageProvider: 'v8',
 };
