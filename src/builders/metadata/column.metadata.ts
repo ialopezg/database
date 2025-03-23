@@ -73,7 +73,7 @@ export class ColumnMetadata extends PropertyMetadata {
   /** @returns The column name, modified by the naming strategy if available. */
   get name(): string {
     if (this.namingStrategy) {
-      return this.namingStrategy.columnName(this.target.name);
+      return this.namingStrategy.columnName(this._name);
     }
     return this._name;
   }

@@ -1,6 +1,7 @@
 import { ColumnOptions } from '../../../builders/options';
 import { ColumnMetadata } from '../../../builders/metadata';
 import { ColumnType } from '../../../builders/options/column-type.enum';
+import { DefaultNamingStrategy } from '../../../strategies';
 
 describe('ColumnMetadata - Type Resolution', () => {
   let columnMetadata: ColumnMetadata;
@@ -151,6 +152,29 @@ describe('ColumnMetadata - Type Resolution', () => {
         length: -1,
       }))
         .toThrow(`Invalid length for column 'test_column': Must be a positive number.`);
+    });
+  });
+
+  describe('NamingStrategy', () => {
+    class User {
+      format: string;
+
+      constructor(name: string) {
+        this.format = name;
+      }
+    }
+
+    it('should resolve the column name with naming strategy', () => {
+      const column = new ColumnMetadata(User, 'format', false, false, false, {});
+      column.namingStrategy = new DefaultNamingStrategy();
+
+      expect(column.name).toBe('format')
+    });
+
+    it('should resolve the column name without naming strategy', () => {
+      const column = new ColumnMetadata(User, 'format', false, false, false, {});
+
+      expect(column.name).toBe('format')
     });
   });
 });
