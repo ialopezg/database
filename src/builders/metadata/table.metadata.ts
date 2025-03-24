@@ -17,13 +17,13 @@ export class TableMetadata {
    *                     Should be a boolean value.
    * @throws Error if `target` is not a function.
    */
-  constructor(target: Function, isAbstract: boolean) {
+  constructor(target: Function, isAbstract?: boolean) {
     if (typeof target !== 'function') {
       throw new Error('TableMetadata target must be a function.');
     }
 
     this._target = target;
-    this._isAbstract = isAbstract;
+    this._isAbstract = isAbstract ?? false;
   }
 
   /**
