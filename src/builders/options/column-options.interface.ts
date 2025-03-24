@@ -78,4 +78,13 @@ export interface ColumnOptions {
    * @default undefined
    */
   oldColumnName?: string;
+
+  /**
+   * The default value for the column.
+   * Specifies a value to be used when no value is provided for the column.
+   *
+   * @example "guest"
+   * @default undefined
+   */
+  default?: any;
 }
