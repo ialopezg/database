@@ -88,7 +88,7 @@ describe('MySQLDriver', () => {
     it('should throw an error when no connection is established', async () => {
       mySQLDriver['_connection'] = null; // Simulate no connection
 
-      await expect(mySQLDriver.disconnect()).rejects.toThrow('⛔️ Connection is not established, cannot disconnect!');
+      await expect(mySQLDriver.disconnect()).rejects.toThrow('Connection is not established, cannot disconnect!');
     });
 
     it('should disconnect successfully', async () => {
@@ -135,7 +135,7 @@ describe('MySQLDriver', () => {
       mockConnection.query.mockImplementation((_sql, callback) => callback(new Error(errorMessage), null));
 
       await mySQLDriver.connect(connectionOptions);
-      await expect(mySQLDriver.query('SELECT * FROM users')).rejects.toThrow(`❌ Query execution failed: ${errorMessage}`);
+      await expect(mySQLDriver.query('SELECT * FROM users')).rejects.toThrow(`Query execution failed: ${errorMessage}`);
     });
   });
 });
