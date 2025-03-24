@@ -1,6 +1,10 @@
+import {
+  InvalidColumnLengthError,
+  InvalidColumnOptionsError,
+  InvalidColumnTypeError,
+} from '../../errors';
 import { NamingStrategy } from '../../strategies';
-import { ColumnOptions } from '../options';
-import { ColumnType } from '../options/column-type.enum';
+import { ColumnOptions, ColumnType } from '../options';
 import { PropertyMetadata } from './property.metadata';
 
 /**
@@ -31,6 +35,7 @@ export class ColumnMetadata extends PropertyMetadata {
   private readonly _columnDefinition: string;
   private readonly _comment: string;
   private readonly _oldColumnName: string;
+  private readonly _default: any;
   namingStrategy?: NamingStrategy;
 
   /**
@@ -66,6 +71,7 @@ export class ColumnMetadata extends PropertyMetadata {
     this._columnDefinition = options.columnDefinition ?? '';
     this._comment = options.comment ?? '';
     this._oldColumnName = options.oldColumnName ?? '';
+    this._default = options.default;
 
     this.validateColumnOptions();
   }
@@ -133,6 +139,11 @@ export class ColumnMetadata extends PropertyMetadata {
     return this._oldColumnName;
   }
 
+  /** @returns The default value for the column, if provided. */
+  get default(): any {
+    return this._default;
+  }
+
   /**
    * Resolves the appropriate column type from the provided type.
    *
@@ -156,7 +167,7 @@ export class ColumnMetadata extends PropertyMetadata {
       return resolvedType;
     }
 
-    throw new Error(`Unsupported column type: '${type}'. Column name: ${this._name}`);
+    throw new InvalidColumnTypeError(type, this._name);
   }
 
   /**
@@ -186,10 +197,12 @@ export class ColumnMetadata extends PropertyMetadata {
    */
   private validateColumnOptions(): void {
     if (this._length !== undefined && this._length <= 0) {
-      throw new Error(`Invalid length for column '${this._name}': Must be a positive number.`);
+      throw new InvalidColumnLengthError(this._name, this._length);
     }
     if (this._isPrimary && this._isNullable) {
-      throw new Error(`Column '${this._name}' cannot be both PRIMARY and NULLABLE.`);
+      throw new InvalidColumnOptionsError(
+        `Column '${this._name}' cannot be both PRIMARY and NULLABLE.`
+      );
     }
   }
 }

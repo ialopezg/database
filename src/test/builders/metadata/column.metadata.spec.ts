@@ -1,6 +1,5 @@
-import { ColumnOptions } from '../../../builders/options';
+import { ColumnOptions, ColumnType } from '../../../builders/options';
 import { ColumnMetadata } from '../../../builders/metadata';
-import { ColumnType } from '../../../builders/options/column-type.enum';
 import { DefaultNamingStrategy } from '../../../strategies';
 
 describe('ColumnMetadata - Type Resolution', () => {
@@ -90,7 +89,7 @@ describe('ColumnMetadata - Type Resolution', () => {
         ...baseOptions,
         type: 'invalidType',
       }))
-        .toThrow(`Unsupported column type: 'invalidType'.`);
+        .toThrow(`Invalid column type for 'invalidType': 'test_column' is not a supported type.`);
     });
   });
 
@@ -125,6 +124,7 @@ describe('ColumnMetadata - Type Resolution', () => {
       expect(column.isAutoIncrement).toBe(false);
       expect(column.isUnique).toBe(false);
       expect(column.isNullable).toBe(false);
+      expect(column.default).toBe(undefined);
     });
 
     it('should default to VARCHAR when type is undefined', () => {
@@ -151,7 +151,7 @@ describe('ColumnMetadata - Type Resolution', () => {
         isNullable: true,
         length: -1,
       }))
-        .toThrow(`Invalid length for column 'test_column': Must be a positive number.`);
+        .toThrow(`Invalid length for column 'test_column': Length must be a positive number. Provided length: -1.`);
     });
   });
 
