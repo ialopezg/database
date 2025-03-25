@@ -1,5 +1,5 @@
 import { ConnectionOptions } from '../connection';
-import { MysqlSchemaBuilder, QueryBuilder, SchemaBuilder } from './builders';
+import { MySQLSchemaBuilder, QueryBuilder, SchemaBuilder } from './builders';
 import { DatabaseDriver } from './database.driver';
 
 /**
@@ -34,7 +34,7 @@ export class MySQLDriver extends DatabaseDriver {
 
   /** @inheritdoc */
   public createSchemaBuilder(): SchemaBuilder {
-    return new MysqlSchemaBuilder(this);
+    return new MySQLSchemaBuilder(this);
   }
 
   /** @inheritdoc */

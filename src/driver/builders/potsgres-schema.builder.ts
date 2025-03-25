@@ -1,17 +1,13 @@
 /* eslint-disable */
-import { Driver } from '../driver';
-import { SchemaBuilder } from './schema.builder';
 import { ColumnMetadata, ForeignKeyMetadata, TableMetadata } from '../../builders/metadata';
+import { BaseSchemaBuilder } from './base-schema.builder';
+import { ColumnType } from '../../builders/options';
 
 /**
  * PostgresSQL-specific implementation of the SchemaBuilder for handling schema DDL operations.
  * This class implements methods to create and modify PostgreSQL database schemas.
  */
-export class PostgresSchemaBuilder extends SchemaBuilder {
-  constructor(private readonly driver: Driver) {
-    super();
-  }
-
+export class PostgresSchemaBuilder extends BaseSchemaBuilder {
   addColumn(tableName: string, column: ColumnMetadata): Promise<boolean> {
     return Promise.resolve(false);
   }
@@ -48,13 +44,6 @@ export class PostgresSchemaBuilder extends SchemaBuilder {
     return Promise.resolve(undefined);
   }
 
-  getChangedColumns(entity: string, columns: ColumnMetadata[]): Promise<{
-    columnName: string;
-    hasPrimaryKey: boolean
-  }[]> {
-    return Promise.resolve([]);
-  }
-
   getForeignKeys(table: TableMetadata): Promise<string[]> {
     return Promise.resolve([]);
   }
@@ -69,5 +58,21 @@ export class PostgresSchemaBuilder extends SchemaBuilder {
 
   getTableUniqueKeys(tableName: string): Promise<string[]> {
     return Promise.resolve([]);
+  }
+
+  protected getPrimaryKeyStatus(dbData: any): boolean {
+    return false;
+  }
+
+  protected getSchemaQuery(entity: string): string {
+    return '';
+  }
+
+  protected isColumnChanged(dbData: any, column: ColumnMetadata): boolean {
+    return false;
+  }
+
+  protected normalizeType(type: ColumnType, length?: number): string {
+    return '';
   }
 }
