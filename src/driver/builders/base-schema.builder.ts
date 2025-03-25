@@ -14,7 +14,7 @@ export abstract class BaseSchemaBuilder extends SchemaBuilder {
    *
    * @param driver - The database driver instance.
    */
-  protected constructor(protected readonly driver: Driver) {
+  public constructor(protected readonly driver: Driver) {
     super();
   }
 
@@ -83,7 +83,8 @@ export abstract class BaseSchemaBuilder extends SchemaBuilder {
    *
    * @param {ColumnType} type - The column data type.
    * @param {number} length - The optional length of the column.
+   * @param {number} precision
    * @returns The normalized database type.
    */
-  protected abstract normalizeType(type: ColumnType, length?: number): string;
+  protected abstract normalizeType(type: ColumnType, length?: number, precision?: number): string;
 }

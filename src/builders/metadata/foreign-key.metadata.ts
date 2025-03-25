@@ -102,7 +102,7 @@ export class ForeignKeyMetadata {
    * @returns An array of column names.
    */
   get columnNames(): string[] {
-    return this._columns.map((column) => column.name);
+    return (this._columns ?? []).map((column) => column.name);
   }
 
   /**
@@ -129,6 +129,6 @@ export class ForeignKeyMetadata {
    * @returns An array of related column names.
    */
   get relatedColumnNames(): string[] {
-    return this._relatedColumns.map((column) => column.name);
+    return (this._relatedColumns ?? []).map((column) => column.name);
   }
 }
