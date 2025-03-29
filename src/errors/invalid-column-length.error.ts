@@ -14,7 +14,7 @@ export class InvalidColumnLengthError extends BaseError {
    */
   constructor(columnName: string, length: number) {
     super(
-      `Invalid length for column '${columnName}': Length must be a positive number. Provided length: ${length}.`
+      `Invalid length for column '${columnName}': Length must be a positive number greater than zero. Provided length: ${length}`
     );
   }
 }
