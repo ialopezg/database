@@ -12,15 +12,19 @@ import { PropertyMetadata } from './property.metadata';
  */
 export class ColumnMetadata extends PropertyMetadata {
   private static readonly typeMap = new Map<string, ColumnType>([
-    ['number', ColumnType.INTEGER],
+    ['number', ColumnType.INT],
+    ['integer', ColumnType.INT],
     ['boolean', ColumnType.BOOLEAN],
     ['string', ColumnType.VARCHAR],
+    ['char', ColumnType.CHAR],
     ['text', ColumnType.TEXT],
     ['json', ColumnType.JSON],
-    ['integer', ColumnType.INTEGER],
+    ['integer', ColumnType.INT],
     ['float', ColumnType.FLOAT],
     ['date', ColumnType.DATE],
     ['timestamp', ColumnType.TIMESTAMP],
+    ['uuid', ColumnType.UUID],
+    ['varchar', ColumnType.VARCHAR],
   ]);
 
   private readonly _name: string;
@@ -59,7 +63,7 @@ export class ColumnMetadata extends PropertyMetadata {
   ) {
     super(target, propertyName);
 
-    this._name = options.name || propertyName;
+    this._name = this.normalizeColumnName(options.name || propertyName);
     this._type = this.resolveColumnType(options.type);
     this._length = options.length ?? this.getDefaultLength(this._type);
     this._isPrimary = isPrimary;
@@ -145,16 +149,45 @@ export class ColumnMetadata extends PropertyMetadata {
   }
 
   /**
+   * Normalizes and validates the column name.
+   *
+   * - Trims leading/trailing whitespace
+   * - Ensures the name starts with a letter or underscore
+   * - Ensures it contains only alphanumeric characters or underscores
+   *
+   * @param name - The column name to normalize and validate.
+   * @returns The normalized column name.
+   * @throws InvalidColumnOptionsError if the name is invalid.
+   */
+  private normalizeColumnName(name: string): string {
+    const trimmed = name.trim();
+
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(trimmed)) {
+      throw new InvalidColumnOptionsError(
+        `Invalid column name: "${name}". Column names must start with a letter or underscore and contain only alphanumeric characters or underscores.`
+      );
+    }
+
+    return trimmed;
+  }
+
+  /**
    * Resolves the appropriate column type from the provided type.
    *
-   * @param type - The type provided in `ColumnOptions`.
-   * It can be a constructor function or a string.
-   * @returns The resolved `ColumnType`.
-   * @throws Error if the type is unsupported.
+   * @param {Function | string} type Optional. The column types to resolve.
+   * It can be a class constructor (e.g., `String`, `Number`) or a string (e.g., `"varchar"`, `"uuid"`).
+   * If omitted, default to `VARCHAR`.
+   * @returns {ColumnType} The resolved column type.
+   * @throws {InvalidColumnTypeError} If the type is unsupported or unrecognized.
    */
   private resolveColumnType(type?: Function | string): ColumnType {
     if (!type) {
       return ColumnType.VARCHAR;
+    }
+
+    // ✅ Allow direct ColumnType enums (e.g., ColumnType.VARCHAR === 'VARCHAR')
+    if (typeof type === 'string' && Object.values(ColumnType).includes(type as ColumnType)) {
+      return type as ColumnType;
     }
 
     if (typeof type === 'function') {
@@ -162,47 +195,70 @@ export class ColumnMetadata extends PropertyMetadata {
       return ColumnMetadata.typeMap.get(typeName) ?? ColumnType.VARCHAR;
     }
 
-    const resolvedType = ColumnMetadata.typeMap.get(type.toLowerCase());
-    if (resolvedType) {
-      return resolvedType;
+    const normalizedType = type.trim().toLowerCase();
+
+    if (ColumnMetadata.typeMap.has(normalizedType)) {
+      return ColumnMetadata.typeMap.get(normalizedType)!;
     }
 
     throw new InvalidColumnTypeError(type, this._name);
   }
 
   /**
-   * Determines the default length for certain column types.
+   * Infers the default length for a given column type.
    *
-   * @param type - The column type.
-   * @returns The default length for the column type.
+   * @param {ColumnType} type - The column type to evaluate.
+   * @returns {number | undefined} The default length, or `undefined` if not applicable.
    */
   private getDefaultLength(type: ColumnType): number | undefined {
-    const defaultLengths: { [key: string]: number | undefined } = {
-      [ColumnType.VARCHAR]: 255,
-      [ColumnType.INTEGER]: 11,
-      [ColumnType.FLOAT]: 10,
-      [ColumnType.TEXT]: undefined,
-      [ColumnType.JSON]: undefined,
-      [ColumnType.BOOLEAN]: 1,
-      [ColumnType.DATE]: undefined,
-      [ColumnType.TIMESTAMP]: undefined,
-    };
-
-    return defaultLengths[type];
+    switch (type) {
+      case ColumnType.VARCHAR:
+        return 255;
+      case ColumnType.CHAR:
+        return 1;
+      case ColumnType.INT:
+        return 11;
+      case ColumnType.FLOAT:
+        return 10;
+      case ColumnType.BOOLEAN:
+        return 1;
+      case ColumnType.TEXT:
+      case ColumnType.JSON:
+      case ColumnType.DATE:
+      case ColumnType.TIMESTAMP:
+        return undefined;
+      default:
+        return undefined;
+    }
   }
 
   /**
    * Validates the column options and ensures consistency.
-   * @throws Error if validation fails.
+   *
+   * - Ensures required length exists for specific types (e.g., VARCHAR, CHAR)
+   * - Ensures no invalid combinations (e.g., PRIMARY + NULLABLE)
+   * - Future-proof: placeholder for precision/scale validation
+   *
+   * @throws {InvalidColumnLengthError} If the length is invalid.
+   * @throws {InvalidColumnOptionsError} If a conflicting or unsupported option is set.
    */
   private validateColumnOptions(): void {
+    const typesRequiringLength: ColumnType[] = [ColumnType.VARCHAR, ColumnType.CHAR];
+
+    if (typesRequiringLength.includes(this._type) && !this._length) {
+      throw new InvalidColumnLengthError(this._name, this._length ?? 0);
+    }
+
     if (this._length !== undefined && this._length <= 0) {
       throw new InvalidColumnLengthError(this._name, this._length);
     }
+
     if (this._isPrimary && this._isNullable) {
       throw new InvalidColumnOptionsError(
         `Column '${this._name}' cannot be both PRIMARY and NULLABLE.`
       );
     }
+
+    // Future: precision/scale checks for DECIMAL
   }
 }
