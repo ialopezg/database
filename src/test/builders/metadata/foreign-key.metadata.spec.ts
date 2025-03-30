@@ -1,78 +1,75 @@
 import { ColumnMetadata, ForeignKeyMetadata, TableMetadata } from '../../../builders/metadata';
-
-class MockTable {
-  static table = 'users'; // Static property for table name
-  constructor() {}
-}
-
-class MockRelatedTable {
-  static table = 'orders'; // Static property for related table name
-  constructor() {}
-}
+import { InvalidNameError } from '../../../errors';
 
 describe('ForeignKeyMetadata', () => {
-  let tableMetadata: TableMetadata;
-  let relatedTableMetadata: TableMetadata;
-  let columns: ColumnMetadata[];
-  let relatedColumns: ColumnMetadata[];
+  class Dummy {}
+  class Referenced {}
 
-  beforeEach(() => {
-    tableMetadata = new TableMetadata(MockTable);
-    relatedTableMetadata = new TableMetadata(MockRelatedTable);
+  const dummyTable = new TableMetadata(Dummy);
+  const referencedTable = new TableMetadata(Referenced);
 
-    columns = [
-      new ColumnMetadata(MockTable, 'user_id', false, false, false, {}),
-      new ColumnMetadata(MockTable, 'order_id', false, false, false, {})
-    ];
+  const columnA = { name: 'user_id', type: 'int' } as unknown as ColumnMetadata;
+  const refColumnA = { name: 'id', type: 'int' } as unknown as ColumnMetadata;
 
-    relatedColumns = [
-      new ColumnMetadata(MockRelatedTable, 'id', false, false, false, {}),
-      new ColumnMetadata(MockRelatedTable, 'id', false, false, false, {})
-    ];
+  describe('Construction & Validation', () => {
+    it('should create a valid foreign key metadata object', () => {
+      const fk = new ForeignKeyMetadata(dummyTable, [columnA], referencedTable, [refColumnA]);
+
+      expect(fk.table).toBe(dummyTable);
+      expect(fk.referencedTable).toBe(referencedTable);
+      expect(fk.columns).toEqual([columnA]);
+      expect(fk.referencedColumns).toEqual([refColumnA]);
+      expect(fk.name).toMatch(/^fk_[a-f0-9]{8}$/);
+    });
+
+    it('should return custom name if provided', () => {
+      const fk = new ForeignKeyMetadata(dummyTable, [columnA], referencedTable, [refColumnA], 'custom_fk_name');
+      expect(fk.name).toBe('custom_fk_name');
+    });
+
+    it('should throw InvalidNameError when table has no valid name', () => {
+      const table = { name: '' } as TableMetadata;
+
+      expect(() => {
+        new ForeignKeyMetadata(table, [columnA], referencedTable, [refColumnA]);
+      }).toThrow(InvalidNameError);
+    });
+
+    it('should throw InvalidNameError when referenced table has no valid name', () => {
+      const refTable = { name: '' } as TableMetadata;
+
+      expect(() => {
+        new ForeignKeyMetadata(dummyTable, [columnA], refTable, [refColumnA]);
+      }).toThrow(InvalidNameError);
+    });
+
+    it('should throw if no foreign key columns are provided', () => {
+      expect(() => {
+        new ForeignKeyMetadata(dummyTable, [], referencedTable, [refColumnA]);
+      }).toThrow('Foreign key must have at least one column.');
+    });
+
+    it('should throw if no referenced columns are provided', () => {
+      expect(() => {
+        new ForeignKeyMetadata(dummyTable, [columnA], referencedTable, []);
+      }).toThrow('Related foreign key must have at least one column.');
+    });
+
+    it('should throw if columns and referencedColumns lengths do not match', () => {
+      const anotherRef = { name: 'another_id', type: 'int' } as unknown as ColumnMetadata;
+
+      expect(() => {
+        new ForeignKeyMetadata(dummyTable, [columnA], referencedTable, [refColumnA, anotherRef]);
+      }).toThrow('Foreign key column count mismatch: 1 vs 2 (table: Dummy, referenced: Referenced)');
+    });
   });
 
-  it('should construct ForeignKeyMetadata correctly', () => {
-    const fkMetadata = new ForeignKeyMetadata(tableMetadata, columns, relatedTableMetadata, relatedColumns);
+  describe('Optional Settings', () => {
+    it('should include optional onDelete and onUpdate actions', () => {
+      const fk = new ForeignKeyMetadata(dummyTable, [columnA], referencedTable, [refColumnA], undefined, 'CASCADE', 'SET NULL');
 
-    expect(fkMetadata).toBeInstanceOf(ForeignKeyMetadata);
-    expect(fkMetadata.table).toEqual(tableMetadata);
-    expect(fkMetadata.columns).toEqual(columns);
-    expect(fkMetadata.relatedTable).toEqual(relatedTableMetadata);
-    expect(fkMetadata.relatedColumns).toEqual(relatedColumns);
-  });
-
-  it('should throw error when table has no valid name', () => {
-    const invalidTableMetadata = new TableMetadata(() => {});
-    expect(() => new ForeignKeyMetadata(invalidTableMetadata, columns, relatedTableMetadata, relatedColumns))
-      .toThrow("Table metadata must have a valid name.");
-  });
-
-  it('should throw error when relatedTable has no valid name', () => {
-    const invalidRelatedTableMetadata = new TableMetadata(() => {});
-    expect(() => new ForeignKeyMetadata(tableMetadata, columns, invalidRelatedTableMetadata, relatedColumns))
-      .toThrow("Related table metadata must have a valid name.");
-  });
-
-  it('should throw error if columns are empty', () => {
-    expect(() => new ForeignKeyMetadata(tableMetadata, [], relatedTableMetadata, relatedColumns))
-      .toThrow("Foreign key must have at least one column.");
-  });
-
-  it('should throw error if relatedColumns are empty', () => {
-    expect(() => new ForeignKeyMetadata(tableMetadata, columns, relatedTableMetadata, []))
-      .toThrow("Related foreign key must have at least one column.");
-  });
-
-  it('should throw error if columns and relatedColumns length do not match', () => {
-    const differentLengthRelatedColumns = [new ColumnMetadata(MockRelatedTable, 'id', false, false, false, {})];
-    expect(() => new ForeignKeyMetadata(tableMetadata, columns, relatedTableMetadata, differentLengthRelatedColumns))
-      .toThrow("The number of columns in the foreign key must match the number of related columns.");
-  });
-
-  it('should generate a unique foreign key name', () => {
-    const fkMetadata = new ForeignKeyMetadata(tableMetadata, columns, relatedTableMetadata, relatedColumns);
-    const name = fkMetadata.name;
-    expect(name.startsWith('fk_')).toBe(true);
-    expect(name.length).toBeGreaterThan(3); // ensuring the hash is included
+      expect(fk.onDelete).toBe('CASCADE');
+      expect(fk.onUpdate).toBe('SET NULL');
+    });
   });
 });
