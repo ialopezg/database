@@ -1,4 +1,4 @@
-import { QueryBuilder } from '../../../../driver/builders';
+import { QueryBuilder } from '../../../driver/builders';
 
 describe('QueryBuilder', () => {
   describe('QueryBuilder - select', () => {
