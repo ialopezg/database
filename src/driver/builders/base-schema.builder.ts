@@ -1,90 +1,208 @@
-import { ColumnMetadata } from '../../builders/metadata';
+import { ColumnMetadata, ForeignKeyMetadata, TableMetadata } from '../../builders/metadata';
 import { ColumnType } from '../../builders/options';
+import { DatabaseQueryError, InvalidNameError } from '../../errors';
+import { QueryResult } from '../../query';
 import { Driver } from '../driver';
+import {
+  ChangedColumn,
+  ColumnIntrospection,
+  ForeignKeyIntrospection,
+  IndexIntrospection,
+  TableColumn,
+  UniqueConstraintIntrospection,
+} from '../schema/introspection';
 import { SchemaBuilder } from './schema.builder';
 
 /**
  * Abstract base class for schema builders.
  * Provides common logic for detecting schema changes across different database engines.
  */
-export abstract class BaseSchemaBuilder extends SchemaBuilder {
+export abstract class BaseSchemaBuilder implements SchemaBuilder {
   /**
    * Initializes the schema builder with a database driver.
    * This constructor is protected to enforce subclassing.
    *
    * @param driver - The database driver instance.
    */
-  public constructor(protected readonly driver: Driver) {
-    super();
-  }
+  protected constructor(protected readonly driver: Driver) {}
 
-  /** @inheritdoc */
-  async getChangedColumns(
-    tableName: string,
-    columns: ColumnMetadata[]
-  ): Promise<{ columnName: string; hasPrimaryKey: boolean }[]> {
-    const queryStr: string = this.getSchemaQuery(tableName);
-    const result: any[] = await this.query<any[]>(queryStr);
-
-    const dbColumnMap: Map<string, any> = new Map(result.map((c) => [c.COLUMN_NAME, c]));
-
-    return columns
-      .filter((column) => {
-        const dbData = dbColumnMap.get(column.name);
-        return dbData ? this.isColumnChanged(dbData, column) : false;
-      })
-      .map((column) => {
-        const dbData = dbColumnMap.get(column.name);
-        return {
-          columnName: column.name,
-          hasPrimaryKey: this.getPrimaryKeyStatus(dbData),
-        };
-      });
-  }
+  /**
+   * Escapes an identifier (e.g., table name, column name) to prevent SQL injection.
+   *
+   * @param identifier - The string to be escaped.
+   * @returns The escaped identifier wrapped in backticks.
+   */
+  protected abstract escapeIdentifier(identifier: string): string;
 
   /**
    * Executes a raw SQL query using the database driver.
    *
    * @template T - The expected return type of the query result.
    * @param queryStr - The SQL query string to execute.
-   * @returns A promise resolving with the query result.
+   * @returns A QueryResult object.
    */
-  protected async query<T extends Record<string, any>>(queryStr: string): Promise<T[]> {
-    return this.driver.query<T[]>(queryStr);
+  public async query<T extends Record<string, any>>(queryStr: string): Promise<QueryResult<T>> {
+    const rows = (await this.driver.query<T[]>(queryStr)) ?? [];
+
+    return {
+      rows,
+      first: rows[0],
+      affectedRows: rows.length,
+      rawQuery: queryStr,
+    };
   }
-
-  /**
-   * Extract primary key status from the database column data.
-   *
-   * @param dbData - The database column metadata.
-   * @returns True if the column is a primary key, otherwise false.
-   */
-  protected abstract getPrimaryKeyStatus(dbData: any): boolean;
-
-  /**
-   * Abstract method to determine if a column has changed compared to the database schema.
-   *
-   * @param dbData - The database column metadata.
-   * @param column - The column metadata from the entity definition.
-   * @returns True if the column has changed, otherwise false.
-   */
-  protected abstract isColumnChanged(dbData: any, column: ColumnMetadata): boolean;
-
-  /**
-   * Returns the SQL query to retrieve schema information for a given entity.
-   *
-   * @param entity - The name of the database table.
-   * @returns The SQL query string.
-   */
-  protected abstract getSchemaQuery(entity: string): string;
 
   /**
    * Normalizes a column type to match the database engine's type system.
    *
-   * @param {ColumnType} type - The column data type.
-   * @param {number} length - The optional length of the column.
-   * @param {number} precision
+   * @param type - The column data type.
+   * @param length - The optional length of the column.
+   * @param precision - The optional precision.
    * @returns The normalized database type.
    */
   protected abstract normalizeType(type: ColumnType, length?: number, precision?: number): string;
+
+  /** @inheritdoc */
+  abstract createTable(tableName: TableMetadata, columns: ColumnMetadata[]): Promise<void>;
+
+  /** @inheritdoc */
+  abstract dropTable(tableName: string): Promise<boolean>;
+
+  /** @inheritdoc */
+  abstract hasTable(tableName: string): Promise<boolean>;
+
+  /** @inheritdoc */
+  abstract addColumn(tableName: string, column: ColumnMetadata): Promise<boolean>;
+
+  /** @inheritdoc */
+  abstract dropColumn(tableName: string, columnName: string): Promise<boolean>;
+
+  /** @inheritdoc */
+  abstract renameColumn(
+    tableName: string,
+    columnName: string,
+    newColumn: ColumnMetadata
+  ): Promise<void>;
+
+  /** @inheritdoc */
+  abstract alterColumn(
+    tableName: string,
+    columnName: string,
+    newDefinition: ColumnMetadata,
+    skipPrimary?: boolean
+  ): Promise<void>;
+
+  /** @inheritdoc */
+  abstract getChangedColumns(
+    tableName: string,
+    columns: ColumnMetadata[]
+  ): Promise<ChangedColumn[]>;
+
+  /** @inheritdoc */
+  abstract createIndex(
+    tableName: string,
+    indexName: string,
+    columns: string[],
+    indexType?: 'UNIQUE' | 'FULLTEXT' | 'SPATIAL'
+  ): Promise<void>;
+
+  /** @inheritdoc */
+  abstract dropIndex(tableName: string, indexName: string): Promise<boolean>;
+
+  /** @inheritdoc */
+  abstract addUniqueKey(tableName: string, columnName: string, keyName: string): Promise<void>;
+
+  /** @inheritdoc */
+  abstract dropUniqueKey(tableName: string, constraintName: string): Promise<boolean>;
+
+  /** @inheritdoc */
+  abstract addForeignKey(foreignKey: ForeignKeyMetadata): Promise<boolean>;
+
+  /** @inheritdoc */
+  abstract dropForeignKey(tableName: string, foreignKeyName: string): Promise<boolean>;
+
+  /** @inheritdoc */
+  abstract getTableColumns(tableName: string): Promise<ColumnIntrospection[]>;
+
+  /** @inheritdoc */
+  abstract getForeignKeys(tableName: string): Promise<ForeignKeyIntrospection[]>;
+
+  /** @inheritdoc */
+  abstract getTableIndexes(tableName: string): Promise<IndexIntrospection[]>;
+
+  /** @inheritdoc */
+  abstract getUniqueConstraints(tableName: string): Promise<UniqueConstraintIntrospection[]>;
+
+  /** @inheritdoc */
+  abstract getUniqueConstraintNames(tableName: string): Promise<string[]>;
+
+  /** @inheritdoc */
+  abstract getTables(): Promise<string[]>;
+
+  /** @inheritdoc */
+  abstract getTableDefinition(tableName: string): Promise<string>;
+
+  /** @inheritdoc */
+  abstract getPrimaryKey(tableName: string): Promise<string | undefined>;
+
+  /** @inheritdoc */
+  abstract getColumnDefinition(
+    tableName: string,
+    columnName: string
+  ): Promise<TableColumn | undefined>;
+
+  /** @inheritdoc */
+  abstract getDatabaseVersion(): Promise<string>;
+
+  /**
+   * Validates that a given name (table, column, etc.) is non-empty.
+   *
+   * @param name - The name to validate.
+   * @param kind - Optional label to customize the error message.
+   */
+  protected validateName(name: string, kind: string): void {
+    if (!name?.trim()) {
+      throw new InvalidNameError(kind);
+    }
+  }
+
+  /**
+   * Executes a query-wrapped function and throws a consistent error message if it fails.
+   *
+   * @param callback - Function that returns a Promise to be wrapped.
+   * @param errorMessage - Base error message to prepend.
+   * @returns The resolved result of the callback.
+   */
+  protected async wrapQuery<T>(callback: () => Promise<T>, errorMessage: string): Promise<T> {
+    try {
+      return await callback();
+    } catch (error: unknown) {
+      throw new DatabaseQueryError(errorMessage, error as Error);
+    }
+  }
+
+  /**
+   * Escapes an SQL string literal to prevent syntax errors or injection.
+   *
+   * @param value - The literal value to escape.
+   * @returns A safely quoted SQL string.
+   */
+  protected escapeLiteral(value: string): string {
+    const escaped = value.replace(/'/g, "''"); // escape single quotes
+    return `'${escaped}'`;
+  }
+
+  /**
+   * Ensures that the provided column list is valid before executing
+   * SQL schema operations like CREATE TABLE.
+   *
+   * @param {ColumnMetadata[]} columns - The list of column definitions to validate.
+   * @param {string} tableName - The name of the table being created (used in the error message).
+   * @throws {Error} If the columns array is missing, not an array, or empty.
+   */
+  protected ensureValidColumns(columns: ColumnMetadata[], tableName: string): void {
+    if (!Array.isArray(columns) || columns.length === 0) {
+      throw new Error(`Columns cannot be empty when creating table "${tableName}"`);
+    }
+  }
 }
