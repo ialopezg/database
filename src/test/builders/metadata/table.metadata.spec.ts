@@ -1,55 +1,45 @@
 import { TableMetadata } from '../../../builders/metadata';
+import { Constructor } from '../../../types';
+import { InvalidTargetError } from '../../../errors';
 import { NamingStrategy } from '../../../strategies';
 
-// Mock the NamingStrategy class
-class MockNamingStrategy implements NamingStrategy {
-  tableName(className: string): string {
-    return `table_${className.toLowerCase()}`;
-  }
-
-  columnName(propertyName: string): string {
-    return `column_${propertyName.toLowerCase()}`;
-  }
-
-  relationName(propertyName: string): string {
-    return `relation_${propertyName.toLowerCase()}`;
-  }
-}
+class SampleEntity {}
+class AbstractEntity {}
 
 describe('TableMetadata', () => {
-  let tableMetadata: TableMetadata;
-
-  beforeEach(() => {
-    tableMetadata = new TableMetadata(function User() {}, true); // Example target class, set abstract to true
+  it('should store and return the target class', () => {
+    const metadata = new TableMetadata(SampleEntity);
+    expect(metadata.target).toBe(SampleEntity);
   });
 
-  it('should throw an error if target is not a function', () => {
-    expect(() => new TableMetadata(<any>'not a function', true)).toThrow(
-      'TableMetadata target must be a function.'
-    );
+  it('should throw InvalidTargetError if target is not a constructor', () => {
+    expect(() => new TableMetadata(undefined as unknown as Constructor)).toThrow(InvalidTargetError);
+    expect(() => new TableMetadata(123 as unknown as Constructor)).toThrow(InvalidTargetError);
+    expect(() => new TableMetadata({} as unknown as Constructor)).toThrow(InvalidTargetError);
   });
 
-  it('should correctly set the target class', () => {
-    expect(typeof tableMetadata.target).toBe('function');
+  it('should default isAbstract to false if not provided', () => {
+    const metadata = new TableMetadata(SampleEntity);
+    expect(metadata.isAbstract).toBe(false);
   });
 
-  it('should return the correct table name without naming strategy', () => {
-    const tableName = tableMetadata.name;
-    expect(tableName).toBe('User');
+  it('should return true for isAbstract if explicitly set', () => {
+    const metadata = new TableMetadata(AbstractEntity, true);
+    expect(metadata.isAbstract).toBe(true);
   });
 
-  it('should return the correct table name with naming strategy', () => {
-    tableMetadata.namingStrategy = new MockNamingStrategy();
-    const tableName = tableMetadata.name;
-    expect(tableName).toBe('table_user');
+  it('should return class name as table name if no namingStrategy is set', () => {
+    const metadata = new TableMetadata(SampleEntity);
+    expect(metadata.name).toBe('SampleEntity');
   });
 
-  it('should correctly identify if the table is abstract', () => {
-    expect(tableMetadata.isAbstract).toBe(true);
-  });
+  it('should use namingStrategy to resolve the table name', () => {
+    const metadata = new TableMetadata(SampleEntity);
+    const mockStrategy: NamingStrategy = {} as NamingStrategy;
+    metadata.namingStrategy = mockStrategy;
+    metadata.namingStrategy.tableName = jest.fn().mockReturnValue('custom_table_name');
 
-  it('should allow updating the naming strategy', () => {
-    tableMetadata.namingStrategy = new MockNamingStrategy();
-    expect(tableMetadata.name).toBe('table_user');
+    expect(metadata.name).toBe('custom_table_name');
+    expect(mockStrategy.tableName).toHaveBeenCalledWith('SampleEntity');
   });
 });
