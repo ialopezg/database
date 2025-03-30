@@ -6,13 +6,8 @@ export default {
   clearMocks: true,
   collectCoverage: true,
   coverageDirectory: 'coverage',
-  collectCoverageFrom: [
-    'src/**/*.{ts,js}',
-    '!**/node_modules/**',
-    '!**/vendor/**',
-    '!**/dist/**',
-    '!**/tests/**',
-  ],
+  collectCoverageFrom: ['src/**/*.ts'],
+  coverageReporters: ['text', 'lcov'],
   coverageProvider: 'v8',
   moduleNameMapper: {
     '^mysql$': '<rootDir>/src/__mocks__/mysql.js',
