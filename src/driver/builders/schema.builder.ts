@@ -1,54 +1,57 @@
 import { ColumnMetadata, ForeignKeyMetadata, TableMetadata } from '../../builders/metadata';
+import {
+  ChangedColumn,
+  ColumnIntrospection,
+  ForeignKeyIntrospection,
+  IndexIntrospection,
+  TableColumn,
+  UniqueConstraintIntrospection,
+} from '../schema/introspection';
 
 /**
- * SchemaBuilder defines methods for interacting with a database schema, including operations
- * such as adding columns, foreign keys, and creating tables. These operations map to DDL queries
- * to modify the database schema.
+ * A modular, type-safe contract for schema manipulation across database engines.
  */
-export abstract class SchemaBuilder {
+export interface SchemaBuilder {
+  /**
+   * Creates a new table.
+   * @param {TableMetadata} table - The table metadata object.
+   * @param {ColumnMetadata[]} columns - The list of columns to create.
+   * @returns {Promise<void>} Resolves once the table is created.
+   */
+  createTable(table: TableMetadata, columns: ColumnMetadata[]): Promise<void>;
+
+  /**
+   * Drops an existing table.
+   * @param {string} tableName - Name of the table to drop.
+   * @returns {Promise<void>} Resolves once the table is dropped.
+   */
+  dropTable(tableName: string): Promise<boolean>;
+
   /**
    * Adds a column to a table.
-   *
-   * @param tableName The name of the tableName (table) to which the column will be added.
-   * @param column The column metadata to be added.
-   * @returns A promise that resolves when the column has been added to the table.
-   * @throws Error if the operation fails.
+   * @param {string} tableName - Name of the table.
+   * @param {ColumnMetadata} column - Column definition.
+   * @returns {Promise<boolean>} Resolves true if column is added.
    */
-  abstract addColumn(tableName: string, column: ColumnMetadata): Promise<boolean>;
+  addColumn(tableName: string, column: ColumnMetadata): Promise<boolean>;
 
   /**
-   * Adds a foreign key constraint between tables.
-   *
-   * @param foreignKey The foreign key metadata containing the relationship details.
-   * @returns A promise that resolves when the foreign key has been added to the table.
-   * @throws Error if the operation fails.
+   * Drops a column from a table.
+   * @param {string} tableName - The name of the table.
+   * @param {string} columnName - The name of the column to drop.
+   * @returns {Promise<boolean>} Resolves true if column is dropped.
    */
-  abstract addForeignKey(foreignKey: ForeignKeyMetadata): Promise<boolean>;
+  dropColumn(tableName: string, columnName: string): Promise<boolean>;
 
   /**
-   * Adds a unique key constraint to a table.
-   *
-   * @param tableName The name of the table to which the unique key will be added.
-   * @param columnName The name of the column that will have the unique key.
-   * @param keyName The name of the unique key constraint.
-   * @returns A promise that resolves when the unique key has been added to the table.
-   * @throws Error if the operation fails.
+   * Renames a column.
+   * @param {string} tableName - Name of the table.
+   * @param {string} columnName - Current column name.
+   * @param {ColumnMetadata} newColumn - New column metadata.
+   * @param {boolean} [skipPrimary=false] - Whether to skip primary key constraint.
+   * @returns {Promise<void>} Resolves once renamed.
    */
-  abstract addUniqueKey(tableName: string, columnName: string, keyName: string): Promise<void>;
-
-  /**
-   * Modifies an existing column in a table.
-   *
-   * @param tableName The name of the table containing the column to be changed.
-   * @param columnName The name of the column to be changed.
-   * @param newColumn The new column metadata with updated properties.
-   * @param skipPrimary Whether to skip changing the primary key constraint.
-   * Defaults to `false`.
-   *
-   * @returns A promise that resolves when the column has been modified.
-   * @throws Error if the operation fails.
-   */
-  abstract changeColumn(
+  renameColumn(
     tableName: string,
     columnName: string,
     newColumn: ColumnMetadata,
@@ -56,109 +59,149 @@ export abstract class SchemaBuilder {
   ): Promise<void>;
 
   /**
-   * Checks if a table exists in the database.
-   *
-   * @param tableName The name of the tableName (table) to check.
-   * @returns A promise that resolves to `true` if the table exists, otherwise `false`.
-   * @throws {DatabaseQueryError} If the query fails.
-   * @throws {InvalidTableNameError} If the table name is invalid or missing.
+   * Alters an existing column.
+   * @param {string} tableName - Name of the table.
+   * @param {string} columnName - The column name to be updated.
+   * @param {ColumnMetadata} column - Column definition.
+   * @param {boolean} [skipPrimary=false] - Whether to skip a primary key.
+   * @returns {Promise<void>} Resolves once altered.
    */
-  abstract checkIfTableExists(tableName: string): Promise<boolean>;
-
-  /**
-   * Creates a new table in the database with specified columns.
-   *
-   * @param table The table metadata containing the table name and other details.
-   * @param columns An array of column metadata for the columns to be created in the table.
-   * @returns A promise that resolves when the table has been created.
-   * @throws Error if the operation fails.
-   */
-  abstract createTable(table: TableMetadata, columns: ColumnMetadata[]): Promise<void>;
-
-  /**
-   * Drops a column from a table.
-   *
-   * @param tableName The name of the tableName (table) from which the column will be dropped.
-   * @param columnName The name of the column to be dropped.
-   * @returns A promise that resolves when the column has been dropped from the table.
-   * @throws Error if the operation fails.
-   */
-  abstract dropColumn(tableName: string, columnName: string): Promise<boolean>;
-
-  /**
-   * Drops a foreign key constraint from a table.
-   *
-   * This method supports two-parameter formats:
-   * - **(foreignKey: ForeignKeyMetadata)**: Drops a foreign key using metadata.
-   * - **(tableName: string, foreignKeyName: string)**: Drops a foreign key using table and key names.
-   *
-   * @param tableNameOrForeignKey - The table name as a string or a `ForeignKeyMetadata` object.
-   * @param foreignKeyName - (Optional) The foreign key constraint name, required if the first parameter is a string.
-   * @throws {Error} If the foreign key name is missing.
-   * @throws {DatabaseQueryError} If the query execution fails.
-   * @returns A promise that resolves when the foreign key is successfully dropped.
-   */
-  abstract dropForeignKey(
-    tableNameOrForeignKey: ForeignKeyMetadata | string,
-    foreignKeyName?: string
+  alterColumn(
+    tableName: string,
+    columnName: string,
+    column: ColumnMetadata,
+    skipPrimary?: boolean
   ): Promise<void>;
 
   /**
-   * Drops an index from a table.
-   *
-   * @param tableName The name of the table from which the index will be dropped.
-   * @param indexName The name of the index to be dropped.
-   * @returns A promise that resolves when the index has been dropped from the table.
-   * @throws Error if the operation fails.
+   * Detects columns that differ between code and database.
+   * @param {string} tableName - Table name.
+   * @param {ColumnMetadata[]} columns - Column metadata to compare.
+   * @returns {Promise<ChangedColumn[]>} Array of changed column results.
    */
-  abstract dropIndex(tableName: string, indexName: string): Promise<void>;
+  getChangedColumns(tableName: string, columns: ColumnMetadata[]): Promise<ChangedColumn[]>;
 
   /**
-   * Retrieves the columns that have been changed in a table compared to the provided list.
-   *
-   * @param entity The name of the entity (table) to check for column changes.
-   * @param columns The list of column metadata to compare against.
-   * @returns A promise that resolves to an array of changed columns, with information on primary key status.
-   * @throws Error if the operation fails.
+   * Creates an index on specified columns.
+   * @param {string} tableName - Table name.
+   * @param {string} indexName - Optional index name.
+   * @param {string[]} columns - Columns to index.
+   * @param {'UNIQUE' | 'FULLTEXT' | 'SPATIAL'} [indexType] - Index type.
+   * @returns {Promise<void>} Resolves once created.
    */
-  abstract getChangedColumns(
-    entity: string,
-    columns: ColumnMetadata[]
-  ): Promise<{ columnName: string; hasPrimaryKey: boolean }[]>;
+  createIndex(
+    tableName: string,
+    indexName: string,
+    columns: string[],
+    indexType?: 'UNIQUE' | 'FULLTEXT' | 'SPATIAL'
+  ): Promise<void>;
 
   /**
-   * Retrieves the foreign keys associated with a table.
-   *
-   * @param table The table metadata to get the foreign keys for.
-   * @returns A promise that resolves to a list of foreign key names.
-   * @throws Error if the operation fails.
+   * Drops an index.
+   * @param {string} tableName - Table name.
+   * @param {string} indexName - Index name.
+   * @returns {Promise<void>} Resolves once dropped.
    */
-  abstract getForeignKeys(table: TableMetadata): Promise<string[]>;
+  dropIndex(tableName: string, indexName: string): Promise<boolean>;
 
   /**
-   * Retrieves the primary constraint name for a table.
-   *
-   * @param tableName The name of the table to get the primary constraint name for.
-   * @returns A promise that resolves to the primary constraint name.
-   * @throws Error if the operation fails.
+   * Adds a unique key to a table.
+   * @param {string} tableName - Table name.
+   * @param {string} constraintName - Constraint name.
+   * @param {string} keyName - Unique columns.
+   * @returns {Promise<void>} Resolves once added.
    */
-  abstract getPrimaryConstraintName(tableName: string): Promise<string>;
+  addUniqueKey(tableName: string, constraintName: string, keyName: string): Promise<void>;
 
   /**
-   * Retrieves the column names for a table.
-   *
-   * @param tableName The name of the table to get the columns for.
-   * @returns A promise that resolves to a list of column names.
-   * @throws Error if the operation fails.
+   * Drops a unique key.
+   * @param {string} tableName - Table name.
+   * @param {string} constraintName - Unique constraint name.
+   * @returns {Promise<boolean>} Resolves true if dropped.
    */
-  abstract getTableColumns(tableName: string): Promise<string[]>;
+  dropUniqueKey(tableName: string, constraintName: string): Promise<boolean>;
 
   /**
-   * Retrieves the unique keys associated with a table.
-   *
-   * @param tableName The name of the table to get the unique keys for.
-   * @returns A promise that resolves to a list of unique key names.
-   * @throws Error if the operation fails.
+   * Adds a foreign key to a table.
+   * @param {ForeignKeyMetadata} foreignKey - The foreign key metadata.
+   * @returns {Promise<boolean>} Resolves once added.
    */
-  abstract getTableUniqueKeys(tableName: string): Promise<string[]>;
+  addForeignKey(foreignKey: ForeignKeyMetadata): Promise<boolean>;
+
+  /**
+   * Drops a foreign key constraint.
+   * @param {string} tableName - Table name.
+   * @param {string} constraintName - FK constraint name.
+   * @returns {Promise<void>} Resolves once dropped.
+   */
+  dropForeignKey(tableName: string, constraintName: string): Promise<boolean>;
+
+  /**
+   * Gets the list of tables in the database.
+   * @returns {Promise<string[]>} Resolves with table names.
+   */
+  getTables(): Promise<string[]>;
+
+  /**
+   * Gets metadata of a table's columns.
+   * @param {string} tableName - Name of the table.
+   * @returns {Promise<ColumnIntrospection[]>} Array of column metadata.
+   */
+  getTableColumns(tableName: string): Promise<ColumnIntrospection[]>;
+
+  /**
+   * Gets a specific column's metadata.
+   * @param {string} tableName - Table name.
+   * @param {string} columnName - Column name.
+   * @returns {Promise<TableColumn | undefined>} Metadata or undefined.
+   */
+  getColumnDefinition(tableName: string, columnName: string): Promise<TableColumn | undefined>;
+
+  /**
+   * Gets all indexes of a table.
+   * @param {string} tableName - Table name.
+   * @returns {Promise<IndexIntrospection[]>} Array of index metadata.
+   */
+  getTableIndexes(tableName: string): Promise<IndexIntrospection[]>;
+
+  /**
+   * Gets all foreign keys of a table.
+   * @param {string} tableName - Table name.
+   * @returns {Promise<ForeignKeyIntrospection[]>} Array of foreign key metadata.
+   */
+  getForeignKeys(tableName: string): Promise<ForeignKeyIntrospection[]>;
+
+  /**
+   * Gets all unique constraints of a table.
+   * @param {string} tableName - Table name.
+   * @returns {Promise<UniqueConstraintIntrospection[]>} Array of unique constraints.
+   */
+  getUniqueConstraints(tableName: string): Promise<UniqueConstraintIntrospection[]>;
+
+  /**
+   * Gets names of all unique constraints.
+   * @param {string} tableName - Table name.
+   * @returns {Promise<string[]>} Array of constraint names.
+   */
+  getUniqueConstraintNames(tableName: string): Promise<string[]>;
+
+  /**
+   * Returns true if table exists.
+   * @param {string} tableName - Table name.
+   * @returns {Promise<boolean>} Whether the table exists.
+   */
+  hasTable(tableName: string): Promise<boolean>;
+
+  /**
+   * Gets the database version string.
+   * @returns {Promise<string>} Version string.
+   */
+  getDatabaseVersion(): Promise<string>;
+
+  /**
+   * Gets the name of the primary key constraint.
+   * @param {string} tableName - Table name.
+   * @returns {Promise<string | undefined>} Name of PK constraint.
+   */
+  getPrimaryKey(tableName: string): Promise<string | undefined>;
 }
