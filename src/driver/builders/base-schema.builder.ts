@@ -198,7 +198,7 @@ export abstract class BaseSchemaBuilder implements SchemaBuilder {
    *
    * @param {ColumnMetadata[]} columns - The list of column definitions to validate.
    * @param {string} tableName - The name of the table being created (used in the error message).
-   * @throws {Error} If the columns array is missing, not an array, or empty.
+   * @throws {Error} If the column array is missing, not an array, or empty.
    */
   protected ensureValidColumns(columns: ColumnMetadata[], tableName: string): void {
     if (!Array.isArray(columns) || columns.length === 0) {
