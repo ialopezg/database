@@ -8,14 +8,7 @@
     "outDir": "dist",
     "rootDir": "src",
     "declaration": true,
-    "sourceMap": true,
-    "paths": {
-      "@/*": ["./src/*"],
-      "@builders/*": ["./src/builders/*"],
-      "@drivers/*": ["./src/drivers/*"],
-      "@strategies/*": ["./src/strategies/*"],
-      "@types/*": ["./src/types/*"]
-    }
+    "sourceMap": true
   },
   "include": ["src"]
 }
