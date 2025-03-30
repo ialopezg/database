@@ -1,30 +1,31 @@
 /**
- * Represents metadata information associated with a specific property within a target class.
+ * Represents metadata associated with a specific property within a target class.
  *
- * This abstract class serves as a base for storing metadata about a property, including its owning
- * class and name.
+ * This abstract class serves as the base structure for storing metadata related to a class property,
+ * such as the owning class (constructor) and the property's name. It is typically used in scenarios
+ * like decorators, reflection, or ORM systems.
  */
 export abstract class PropertyMetadata {
   /**
-   * The class or constructor function to which the property belongs.
+   * The constructor function of the class that declares the property.
+   * This is typically used for reflection or type resolution.
    *
-   * @readonly
+   * @type {NewableFunction}
    */
   public readonly target: NewableFunction;
 
   /**
-   * The name of the property within the target class.
+   * The name of the property in the target class.
    *
-   * @readonly
+   * @type {string}
    */
   public readonly propertyName: string;
 
   /**
-   * Creates an instance of `PropertyMetadata`.
+   * Creates a new instance of `PropertyMetadata`.
    *
-   * @param {NewableFunction} target - The constructor function of the class
-   *                                   containing the property.
-   * @param {string} propertyName - The name of the property.
+   * @param {NewableFunction} target - The constructor function of the class containing the property.
+   * @param {string} propertyName - The name of the property within the target class.
    */
   protected constructor(target: NewableFunction, propertyName: string) {
     this.target = target;
