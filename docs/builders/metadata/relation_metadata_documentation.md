@@ -20,15 +20,15 @@ new RelationMetadata(
 
 ### Parameters
 
-| Name                 | Type                          | Description |
-|----------------------|-------------------------------|-------------|
-| `target`             | `Function`                    | Class where the relation is declared |
-| `propertyName`       | `string`                      | Property name on the declaring entity |
-| `type`               | `RelationType`                | Type of relation (e.g., `'one-to-many'`) |
-| `related`            | `RelatedEntityResolver`       | Function returning the constructor of the related entity |
-| `relatedPropertyName`| `PropertyResolver<any>`       | Resolver for the inverse property name |
-| `isOwner`            | `boolean`                     | Whether this side owns the relation |
-| `options`            | `RelationOptions` *(optional)*| Additional settings like `cascade`, `nullable`, etc. |
+| Name                  | Type                           | Description                                              |
+|-----------------------|--------------------------------|----------------------------------------------------------|
+| `target`              | `Function`                     | Class where the relation is declared                     |
+| `propertyName`        | `string`                       | Property name on the declaring entity                    |
+| `type`                | `RelationType`                 | Type of relation (e.g., `'one-to-many'`)                 |
+| `related`             | `RelatedEntityResolver`        | Function returning the constructor of the related entity |
+| `relatedPropertyName` | `PropertyResolver<any>`        | Resolver for the inverse property name                   |
+| `isOwner`             | `boolean`                      | Whether this side owns the relation                      |
+| `options`             | `RelationOptions` *(optional)* | Additional settings like `cascade`, `nullable`, etc.     |
 
 ---
 

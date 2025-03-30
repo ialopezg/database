@@ -11,6 +11,8 @@ import {
 
 /**
  * Metadata that describes the relationship between two entities.
+ *
+ * @template T The expected entity type to relate to.
  */
 export class RelationMetadata<T = any> extends PropertyMetadata {
   private readonly _name: string;
