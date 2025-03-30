@@ -5,7 +5,7 @@ import { BaseError } from './base.error';
  * Used to enforce safety when interacting with the database schema.
  */
 export class InvalidNameError extends BaseError {
-  constructor(kind: string, value: string) {
-    super(`${kind} must not be empty or invalid: "${value}"`);
+  constructor(kind: string) {
+    super(`${kind} must not be empty or invalid.`);
   }
 }
