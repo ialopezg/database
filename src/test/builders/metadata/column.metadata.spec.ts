@@ -366,4 +366,32 @@ describe('ColumnMetadata', () => {
       expect(column.name).toBe('format');
     });
   });
+
+  describe('helpers', () => {
+    beforeEach(() => {
+      columnMetadata = new ColumnMetadata(
+        function () {},
+        'MOCKED_NAME',
+        false,
+        false,
+        false,
+        { type: ColumnType.VARCHAR },
+      );
+    });
+
+    it('should throw if VARCHAR has no length and no default length is resolved', () => {
+      const metadata = new ColumnMetadata(User, 'title', false, false, false, {
+        type: ColumnType.VARCHAR,
+        length: undefined,
+      });
+
+      (metadata as any)._length = undefined;
+
+      expect(() => {
+        (metadata as any).validateColumnOptions();
+      }).toThrow(
+        "Invalid length for column 'title': Length must be a positive number greater than zero. Provided length: 0"
+      );
+    });
+  });
 });
