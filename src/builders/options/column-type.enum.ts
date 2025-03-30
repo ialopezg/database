@@ -1,89 +1,98 @@
 /**
- * Defines the supported column data types for database columns.
- * This enum ensures type safety when defining column types.
+ * Enum for different SQL column types supported by the database.
+ * This enum helps identify the data type for columns in table definitions.
  */
 export enum ColumnType {
   /**
-   * An integer data type.
-   * Commonly used for numeric values without decimal precision (e.g., primary keys, counters).
-   *
-   * @example 42
+   * Represents an integer column type.
+   * Used for whole numbers without decimals.
    */
-  INTEGER = 'INTEGER',
+  INT = 'INT',
 
   /**
-   * A fixed-precision numeric data type.
-   * Used for financial calculations or cases requiring exact decimal precision.
-   *
-   * @example 9999.99
+   * Represents a large integer column type.
+   * Used for very large whole numbers.
+   */
+  BIGINT = 'BIGINT',
+
+  /**
+   * Represents a decimal column type.
+   * Used for numbers with fixed precision and scale.
    */
   DECIMAL = 'DECIMAL',
 
   /**
-   * A variable-length character string.
-   * Typically used for names, titles, or short text-based data.
-   *
-   * @example "John Doe"
-   */
-  VARCHAR = 'VARCHAR',
-
-  /**
-   * A text data type with no predefined length limit.
-   * Ideal for long-form content such as descriptions, comments, or articles.
-   */
-  TEXT = 'TEXT',
-
-  /**
-   * A boolean data type (`true` or `false`).
-   * Used for binary states like flags or toggles.
-   *
-   * @example true
-   */
-  BOOLEAN = 'BOOLEAN',
-
-  /**
-   * A universally unique identifier (UUID) data type.
-   * Commonly used for primary keys or unique references.
-   *
-   * @example "550e8400-e29b-41d4-a716-446655440000"
-   */
-  UUID = 'UUID',
-
-  /**
-   * A date-only data type.
-   * Stores dates without time components (format: `YYYY-MM-DD`).
-   *
-   * @example "2025-03-22"
-   */
-  DATE = 'DATE',
-
-  /**
-   * A timestamp with both date and time components.
-   * Typically used for tracking events or records with precise timing.
-   *
-   * @example "2025-03-22 14:30:00"
-   */
-  TIMESTAMP = 'TIMESTAMP',
-
-  /**
-   * A floating-point numeric data type.
-   * Used for values that require decimal precision.
-   *
-   * @example 3.14159
+   * Represents a floating-point column type.
+   * Used for numbers with a decimal point, but less precision than DECIMAL.
    */
   FLOAT = 'FLOAT',
 
   /**
-   * A binary large object (BLOB) data type.
-   * Used for storing images, files, or other binary data.
+   * Represents a double-precision floating-point column type.
+   * Used for larger numbers with higher precision.
+   */
+  DOUBLE = 'DOUBLE',
+
+  /**
+   * Represents a variable-length character column type.
+   * Typically used for strings with varying lengths (e.g., names, descriptions).
+   * Requires length validation.
+   */
+  VARCHAR = 'VARCHAR',
+
+  /**
+   * Represents a fixed-length character column type.
+   * Used for strings with a fixed length (e.g., ISO codes).
+   * Requires length validation.
+   */
+  CHAR = 'CHAR',
+
+  /**
+   * Represents a text column type.
+   * Used for large strings, such as descriptions or paragraphs.
+   * It Does not require length validation.
+   */
+  TEXT = 'TEXT',
+
+  /**
+   * Represents a date column type.
+   * Used for storing date values (YYYY-MM-DD).
+   */
+  DATE = 'DATE',
+
+  /**
+   * Represents a datetime column type.
+   * Used for storing date and time values (YYYY-MM-DD HH:MM:SS).
+   */
+  DATETIME = 'DATETIME',
+
+  /**
+   * Represents a timestamp column type.
+   * Used for storing a timestamp value (seconds since the Unix epoch).
+   */
+  TIMESTAMP = 'TIMESTAMP',
+
+  /**
+   * Represents a boolean column type.
+   * Used for storing TRUE or FALSE values.
+   */
+  BOOLEAN = 'BOOLEAN',
+
+  /**
+   * Represents a binary large object (BLOB) column type.
+   * Used for storing binary data, such as images or files.
    */
   BLOB = 'BLOB',
 
   /**
-   * A JSON data type for storing structured objects or arrays.
-   * Useful for dynamic data structures.
-   *
-   * @example {"user": "Alice", "roles": ["admin", "editor"]}
+   * Represents a JSON column type.
+   * Used for storing JSON data.
    */
   JSON = 'JSON',
+
+  /**
+   * Represents a UUID (universally unique identifier) column type.
+   * Commonly used to uniquely identify rows.
+   */
+  UUID = 'UUID',
 }
