@@ -482,7 +482,8 @@ export class QueryBuilder {
       this.columns = ['*'];
     }
 
-    let query = `SELECT ${this.columns.join(', ')} FROM ${tableName}`;
+    let query = `SELECT ${this.columns.join(', ')}
+                 FROM ${tableName}`;
     if (this.fromClause?.alias) {
       query += ` ${this.fromClause.alias}`;
     }
@@ -710,10 +711,10 @@ export class QueryBuilder {
 
     const nonAggregateColumns = this.columns.filter((col) => !isAggregateFunction(col));
 
-    for (const col of nonAggregateColumns) {
-      if (!this.groupByClause.includes(col)) {
+    for (const column of nonAggregateColumns) {
+      if (!this.groupByClause.includes(column)) {
         throw new Error(
-          `Column "${col}" must be included in GROUP BY clause or used in an aggregate function.`
+          `Column "${column}" must be included in GROUP BY clause or used in an aggregate function.`
         );
       }
     }

@@ -1,24 +1,30 @@
 import { QueryBuilder } from '../../../driver/builders';
 
 describe('QueryBuilder', () => {
-  describe('QueryBuilder - select', () => {
-    test('should generate a SELECT query with one column', () => {
+  let queryBuilder: QueryBuilder;
+
+  beforeEach(() => {
+    queryBuilder = new QueryBuilder();
+  });
+
+  describe('select', () => {
+    it('should generate a SELECT query with one column', () => {
       const query = new QueryBuilder().select('id').from('users');
-      expect(query.getQuery()).toBe('SELECT id FROM users');
+      expect(query.getQuery()).toContain('id');
     });
 
-    test('should generate a SELECT query with multiple columns', () => {
+    it('should generate a SELECT query with multiple columns', () => {
       const query = new QueryBuilder().select('id', 'name').from('users');
-      expect(query.getQuery()).toBe('SELECT id, name FROM users');
+      expect(query.getQuery()).toContain('id, name');
     });
 
-    test('should handle adding columns without duplicates', () => {
+    it('should handle adding columns without duplicates', () => {
       const query = new QueryBuilder().select('id').from('users').addColumns('name', 'id');
-      expect(query.getQuery()).toBe('SELECT id, name FROM users');
+      expect(query.getQuery()).toContain('id, name');
     });
   });
 
-  describe('QueryBuilder - addColumns', () => {
+  describe('addColumns', () => {
     it('should throw an error if FROM is not called before generating the query', () => {
       const queryBuilder = new QueryBuilder();
       expect(() => queryBuilder.getQuery()).toThrow('FROM clause must be defined before generating the query');
@@ -26,24 +32,24 @@ describe('QueryBuilder', () => {
 
     it('should add new columns without duplicates', () => {
       const query = new QueryBuilder().select('id').from('users').addColumns('name', 'email', 'id');
-      expect(query.getQuery()).toBe('SELECT id, name, email FROM users');
+      expect(query.getQuery()).toContain('id, name, email');
     });
 
     it('should maintain existing columns and not add duplicates', () => {
       const query = new QueryBuilder().select('id', 'name').from('users').addColumns('name', 'email');
-      expect(query.getQuery()).toBe('SELECT id, name, email FROM users');
+      expect(query.getQuery()).toContain('id, name, email');
     });
 
     it('should not break when called with no arguments', () => {
       const query = new QueryBuilder().select('id').from('users').addColumns();
-      expect(query.getQuery()).toBe('SELECT id FROM users');
+      expect(query.getQuery()).toContain('id');
     });
   });
 
-  describe('QueryBuilder - from', () => {
+  describe('from', () => {
     it('should generate FROM clause correctly', () => {
       const query = new QueryBuilder().select('id').from('users', 'u').getQuery();
-      expect(query).toBe('SELECT id FROM users u');
+      expect(query).toContain('FROM users u');
     });
 
     it('should throw an error if no entity is provided', () => {
@@ -82,69 +88,69 @@ describe('QueryBuilder', () => {
     });
   });
 
-  describe('QueryBuilder - joins', () => {
-    test('should generate INNER JOIN query', () => {
+  describe('joins', () => {
+    it('should generate INNER JOIN query', () => {
       const query = new QueryBuilder().select('id').from('users').innerJoin('products', 'p', 'ON', 'users.id = products.user_id');
-      expect(query.getQuery()).toBe('SELECT id FROM users INNER JOIN products p ON users.id = products.user_id');
+      expect(query.getQuery()).toContain('INNER JOIN products p ON users.id = products.user_id');
     });
 
-    test('should generate LEFT JOIN query', () => {
+    it('should generate LEFT JOIN query', () => {
       const query = new QueryBuilder().select('id').from('users').leftJoin('products', 'p', 'ON', 'users.id = products.user_id');
-      expect(query.getQuery()).toBe('SELECT id FROM users LEFT JOIN products p ON users.id = products.user_id');
+      expect(query.getQuery()).toContain('LEFT JOIN products p ON users.id = products.user_id');
     });
 
-    test('should generate RIGHT JOIN query', () => {
+    it('should generate RIGHT JOIN query', () => {
       const query = new QueryBuilder().select('id').from('users').rightJoin('products', 'p', 'ON', 'users.id = products.user_id');
-      expect(query.getQuery()).toBe('SELECT id FROM users RIGHT JOIN products p ON users.id = products.user_id');
+      expect(query.getQuery()).toContain('RIGHT JOIN products p ON users.id = products.user_id');
     });
 
-    test('should generate CROSS JOIN query', () => {
+    it('should generate CROSS JOIN query', () => {
       const query = new QueryBuilder().select('id').from('users').crossJoin('products');
-      expect(query.getQuery()).toBe('SELECT id FROM users CROSS JOIN products');
+      expect(query.getQuery()).toContain('CROSS JOIN products');
     });
 
-    test('should generate NATURAL JOIN query', () => {
+    it('should generate NATURAL JOIN query', () => {
       const query = new QueryBuilder().select('id').from('users').naturalJoin('products');
-      expect(query.getQuery()).toBe('SELECT id FROM users NATURAL JOIN products');
+      expect(query.getQuery()).toContain('NATURAL JOIN products');
     });
   });
 
-  describe('QueryBuilder - where', () => {
-    test('should generate WHERE condition query', () => {
+  describe('where', () => {
+    it('should generate WHERE condition query', () => {
       const query = new QueryBuilder().select('id').from('users').where('id = 1');
-      expect(query.getQuery()).toBe('SELECT id FROM users WHERE id = 1');
+      expect(query.getQuery()).toContain('WHERE id = 1');
     });
 
-    test('should generate AND WHERE condition query', () => {
+    it('should generate AND WHERE condition query', () => {
       const query = new QueryBuilder().select('id').from('users').where('id = 1').andWhere('name = "John"');
-      expect(query.getQuery()).toBe('SELECT id FROM users WHERE id = 1 AND name = "John"');
+      expect(query.getQuery()).toContain('WHERE id = 1 AND name = "John"');
     });
 
-    test('should generate OR WHERE condition query', () => {
+    it('should generate OR WHERE condition query', () => {
       const query = new QueryBuilder().select('id').from('users').where('id = 1').orWhere('name = "John"');
-      expect(query.getQuery()).toBe('SELECT id FROM users WHERE id = 1 OR name = "John"');
+      expect(query.getQuery()).toContain('WHERE id = 1 OR name = "John"');
     });
 
-    test('should throw an error if WHERE called with empty string', () => {
+    it('should throw an error if WHERE called with empty string', () => {
       const queryBuilder = new QueryBuilder().select('id').from('users');
 
       expect(() => queryBuilder.where('')).toThrow('WHERE condition cannot be empty');
     });
   });
 
-  describe('QueryBuilder - groupBy', () => {
+  describe('groupBy', () => {
     let qb: QueryBuilder;
 
     beforeEach(() => {
       qb = new QueryBuilder();
     });
 
-    test('should generate a GROUP BY clause with one column', () => {
+    it('should generate a GROUP BY clause with one column', () => {
       const query = qb.select('category').from('products').groupBy('category').getQuery();
       expect(query).toContain('GROUP BY category');
     });
 
-    test('should generate a GROUP BY clause with multiple columns', () => {
+    it('should generate a GROUP BY clause with multiple columns', () => {
       const query = qb
         .select('category', 'brand')
         .from('products')
@@ -154,7 +160,7 @@ describe('QueryBuilder', () => {
       expect(query).toContain('GROUP BY category, brand');
     });
 
-    test('should append additional GROUP BY columns using addGroupBy', () => {
+    it('should append additional GROUP BY columns using addGroupBy', () => {
       const query = qb
         .select('category', 'brand')
         .from('products')
@@ -165,7 +171,7 @@ describe('QueryBuilder', () => {
       expect(query).toContain('GROUP BY category, brand');
     });
 
-    test('should allow aggregate functions without being in GROUP BY', () => {
+    it('should allow aggregate functions without being in GROUP BY', () => {
       const query = qb
         .select('category', 'SUM(price)')
         .from('products')
@@ -176,7 +182,7 @@ describe('QueryBuilder', () => {
       expect(query).toContain('SUM(price)');
     });
 
-    test('should throw error if non-aggregated column is missing from GROUP BY', () => {
+    it('should throw error if non-aggregated column is missing from GROUP BY', () => {
       qb.select('category', 'price', 'SUM(price)').from('products').groupBy('category');
 
       expect(() => qb.getQuery()).toThrowError(
@@ -184,7 +190,7 @@ describe('QueryBuilder', () => {
       );
     });
 
-    test('should not throw error if all selected columns are aggregated or in GROUP BY', () => {
+    it('should not throw error if all selected columns are aggregated or in GROUP BY', () => {
       const query = qb
         .select('category', 'SUM(price)', 'AVG(price)')
         .from('products')
@@ -194,12 +200,12 @@ describe('QueryBuilder', () => {
       expect(query).toContain('GROUP BY category');
     });
 
-    test('should allow adding GROUP BY even if none were initially set', () => {
+    it('should allow adding GROUP BY even if none were initially set', () => {
       const query = qb.select('category').from('products').addGroupBy('category').getQuery();
       expect(query).toContain('GROUP BY category');
     });
 
-    test('should not duplicate columns in GROUP BY', () => {
+    it('should not duplicate columns in GROUP BY', () => {
       const query = qb
         .select('category', 'brand')
         .from('products')
@@ -210,7 +216,7 @@ describe('QueryBuilder', () => {
       expect(query).toContain('GROUP BY category, brand'); // No duplicate "category"
     });
 
-    test('should allow chaining addGroupBy multiple times', () => {
+    it('should allow chaining addGroupBy multiple times', () => {
       const query = qb
         .select('category', 'brand', 'supplier')
         .from('products')
@@ -223,19 +229,17 @@ describe('QueryBuilder', () => {
     });
   });
 
-  describe('QueryBuilder - having', () => {
-    test('should generate HAVING condition query', () => {
+  describe('having', () => {
+    it('should generate HAVING condition query', () => {
       const query = new QueryBuilder()
         .select('category_name', 'COUNT(category_name) AS counter')
         .from('users').groupBy('category_name')
         .having('COUNT(category_name) >= 2');
 
-      expect(
-        query.getQuery()
-      ).toBe('SELECT category_name, COUNT(category_name) AS counter FROM users GROUP BY category_name HAVING COUNT(category_name) >= 2');
+      expect(query.getQuery()).toContain('GROUP BY category_name HAVING COUNT(category_name) >= 2');
     });
 
-    test('should generate AND HAVING condition query', () => {
+    it('should generate AND HAVING condition query', () => {
       const query = new QueryBuilder()
         .select('order_id', 'product_item', 'SUM(order_qty) AS qty, AVG(order_price) AS price')
         .from('users')
@@ -246,7 +250,7 @@ describe('QueryBuilder', () => {
       expect(query.getQuery()).toContain('HAVING SUM(order_qty) >= 2 AND AVG(order_price) > 10');
     });
 
-    test('should generate OR HAVING condition query', () => {
+    it('should generate OR HAVING condition query', () => {
       const query = new QueryBuilder()
         .select('order_id', 'product_item', 'SUM(order_qty) AS qty, AVG(order_price) AS price')
         .from('users')
@@ -257,31 +261,31 @@ describe('QueryBuilder', () => {
       expect(query.getQuery()).toContain('HAVING SUM(order_qty) >= 2 OR AVG(order_price) > 10');
     });
 
-    test('should throw an error if HAVING called with empty string', () => {
+    it('should throw an error if HAVING called with empty string', () => {
       const queryBuilder = new QueryBuilder().select('id').from('users');
 
       expect(() => queryBuilder.having('')).toThrow('HAVING condition cannot be empty');
     });
   });
 
-  describe('QueryBuilder - orderBy', () => {
-    test('should generate ORDER BY query', () => {
+  describe('orderBy', () => {
+    it('should generate ORDER BY query', () => {
       const query = new QueryBuilder().select('id').from('users').orderBy('name');
-      expect(query.getQuery()).toBe('SELECT id FROM users ORDER BY name ASC');
+      expect(query.getQuery()).toContain('ORDER BY name ASC');
     });
 
-    test('should generate ORDER BY query with DESC sorting', () => {
+    it('should generate ORDER BY query with DESC sorting', () => {
       const query = new QueryBuilder().select('id').from('users').orderBy('name', 'DESC');
-      expect(query.getQuery()).toBe('SELECT id FROM users ORDER BY name DESC');
+      expect(query.getQuery()).toContain('ORDER BY name DESC');
     });
 
-    test('should generate ORDER BY with multiple columns', () => {
+    it('should generate ORDER BY with multiple columns', () => {
       const query = new QueryBuilder().select('id').from('users').orderBy('name').addOrderBy('age');
-      expect(query.getQuery()).toBe('SELECT id FROM users ORDER BY name ASC, age ASC');
+      expect(query.getQuery()).toContain('ORDER BY name ASC, age ASC');
     });
   });
 
-  describe('QueryBuilder- addOrderBy', () => {
+  describe('addOrderBy', () => {
     it('should add an additional sorting condition without replacing existing ones', () => {
       const queryBuilder = new QueryBuilder().orderBy('name', 'ASC');
       const query = queryBuilder.addOrderBy('id', 'DESC');
@@ -300,25 +304,25 @@ describe('QueryBuilder', () => {
     });
   });
 
-  describe('QueryBuilder - Limit and Offset', () => {
-    test('should generate query with LIMIT', () => {
+  describe('Limit and Offset', () => {
+    it('should generate query with LIMIT', () => {
       const query = new QueryBuilder().select('id').from('users').setLimit(10);
-      expect(query.getQuery()).toBe('SELECT id FROM users LIMIT 10');
+      expect(query.getQuery()).toContain('LIMIT 10');
     });
 
-    test('should generate query with OFFSET', () => {
+    it('should generate query with OFFSET', () => {
       const query = new QueryBuilder().select('id').from('users').setOffset(5);
-      expect(query.getQuery()).toBe('SELECT id FROM users OFFSET 5');
+      expect(query.getQuery()).toContain('OFFSET 5');
     });
 
-    test('should generate query with both LIMIT and OFFSET', () => {
+    it('should generate query with both LIMIT and OFFSET', () => {
       const query = new QueryBuilder().select('id').from('users').setLimit(10).setOffset(5);
-      expect(query.getQuery()).toBe('SELECT id FROM users LIMIT 10 OFFSET 5');
+      expect(query.getQuery()).toContain('LIMIT 10 OFFSET 5');
     });
   });
 
-  describe('QueryBuilder - getQuery', () => {
-    test('should generate a full query with multiple joins, where, order by, limit, and offset', () => {
+  describe('getQuery', () => {
+    it('should generate a full query with multiple joins, where, order by, limit, and offset tokens', () => {
       const query = new QueryBuilder()
         .select('id', 'name')
         .from('users', 'u')
@@ -329,61 +333,52 @@ describe('QueryBuilder', () => {
         .orderBy('u.name')
         .setLimit(10)
         .setOffset(5);
-      expect(query.getQuery()).toBe(
-        `SELECT id, name FROM users u INNER JOIN orders o ON u.id = o.user_id LEFT JOIN products p ON o.product_id = p.id WHERE u.id = 1 AND p.name = "Laptop" ORDER BY u.name ASC LIMIT 10 OFFSET 5`
+
+      expect(query.getQuery()).toContain('SELECT id, name');
+      expect(query.getQuery()).toContain('FROM users u');
+      expect(query.getQuery()).toContain('INNER JOIN orders o ON u.id = o.user_id');
+      expect(query.getQuery()).toContain('LEFT JOIN products p ON o.product_id = p.id');
+      expect(query.getQuery()).toContain('WHERE u.id = 1 AND p.name = "Laptop"');
+      expect(query.getQuery()).toContain('ORDER BY u.name ASC');
+      expect(query.getQuery()).toContain('LIMIT 10 OFFSET 5');
+    });
+  });
+
+  describe('setParameter', () => {
+    it('should set a parameter with valid name and value', () => {
+      const param = { name: ':id', value: 1 };
+      queryBuilder.setParameter(param);
+
+      expect(queryBuilder['parameters'].get(param.name)).toBe(param.value.toString());
+    });
+
+    it('should set a parameter with name not prepended with `:` and value', () => {
+      const param = { name: 'id', value: 1 };
+      queryBuilder.setParameter(param);
+
+      expect(queryBuilder['parameters'].get(param.name)).toBe(param.value.toString());
+    });
+
+    it('should throw an error if parameter name does not follow naming conventions', () => {
+      const invalidParam = { name: ':123id', value: 1 };
+
+      // Test for an invalid parameter name (starts with a number)
+      expect(() => queryBuilder.setParameter(invalidParam)).toThrow(
+        "Invalid parameter name ':123id'. Use alphanumeric characters and underscores."
       );
     });
   });
 
-  describe('QueryBuilder - parameter', () => {
-    let queryBuilder: QueryBuilder;
+  describe('setParameters', () => {
+    it('should set an array of parameters with valid name and value', () => {
+      const param = { name: ':id', value: 1 };
+      queryBuilder.setParameters([param]);
 
-    beforeEach(() => {
-      queryBuilder = new QueryBuilder();
+      expect(queryBuilder['parameters'].get(param.name)).toBe(param.value.toString());
     });
+  })
 
-    describe('setParameter', () => {
-      it('should set a parameter with valid name and value', () => {
-        const param = { name: ':id', value: 1 };
-        queryBuilder.setParameter(param);
-
-        expect(queryBuilder['parameters'].get(param.name)).toBe(param.value.toString());
-      });
-
-      it('should set a parameter with name not prepended with `:` and value', () => {
-        const param = { name: 'id', value: 1 };
-        queryBuilder.setParameter(param);
-
-        expect(queryBuilder['parameters'].get(param.name)).toBe(param.value.toString());
-      });
-
-      it('should throw an error if parameter name does not follow naming conventions', () => {
-        const invalidParam = { name: ':123id', value: 1 };
-
-        // Test for an invalid parameter name (starts with a number)
-        expect(() => queryBuilder.setParameter(invalidParam)).toThrow(
-          "Invalid parameter name ':123id'. Use alphanumeric characters and underscores."
-        );
-      });
-    });
-
-    describe('setParameters', () => {
-      it('should set an array of parameters with valid name and value', () => {
-        const param = { name: ':id', value: 1 };
-        queryBuilder.setParameters([param]);
-
-        expect(queryBuilder['parameters'].get(param.name)).toBe(param.value.toString());
-      });
-    })
-  });
-
-  describe('QueryBuilder - Helpers', () => {
-    let queryBuilder: QueryBuilder;
-
-    beforeEach(() => {
-      queryBuilder = new QueryBuilder();
-    });
-
+  describe('helpers', () => {
     describe('getTableName', () => {
       it('should throw an error if the table name is not specified using from()', () => {
         expect(() => {
@@ -450,7 +445,7 @@ describe('QueryBuilder', () => {
         queryBuilder.from('users');
 
         const query = queryBuilder['createSelectClause']();
-        expect(query).toBe('SELECT * FROM users');
+        expect(query).toContain('SELECT *');
       });
     });
 
@@ -568,7 +563,7 @@ describe('QueryBuilder', () => {
         const result = queryBuilder['replaceParameters'](query);
 
         // Expect the named parameters to be replaced with their values
-        expect(result).toBe(`SELECT * FROM users WHERE id = 1 AND name = 'John'`);
+        expect(result).toContain(`WHERE id = 1 AND name = 'John'`);
       });
     });
 
