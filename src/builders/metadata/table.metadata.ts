@@ -1,4 +1,6 @@
+import { InvalidTargetError } from '../../errors';
 import { NamingStrategy } from '../../strategies';
+import { Constructor } from '../../types';
 
 /**
  * Represents metadata for a database table, including its name, target entity, and abstraction status.
@@ -17,9 +19,9 @@ export class TableMetadata {
    *                     Should be a boolean value.
    * @throws Error if `target` is not a function.
    */
-  constructor(target: Function, isAbstract?: boolean) {
-    if (typeof target !== 'function') {
-      throw new Error('TableMetadata target must be a function.');
+  constructor(target: Constructor, isAbstract?: boolean) {
+    if (!target || typeof target !== 'function') {
+      throw new InvalidTargetError('TableMetadata', target);
     }
 
     this._target = target;
