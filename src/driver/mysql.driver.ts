@@ -19,6 +19,7 @@ export class MySQLDriver extends DatabaseDriver {
    */
   public constructor(engine: any) {
     super();
+
     this._engine = engine;
   }
 
@@ -50,7 +51,7 @@ export class MySQLDriver extends DatabaseDriver {
     return new Promise<void>((resolve, reject) => {
       this._connection.connect((err: any | null) => {
         if (err) {
-          return reject(new Error(`⛔️ Failed to connect: ${err.message}`));
+          return reject(new Error(`Failed to connect: ${err.message}`));
         }
         resolve();
       });
@@ -60,13 +61,13 @@ export class MySQLDriver extends DatabaseDriver {
   /** @inheritdoc */
   public async disconnect(): Promise<void> {
     if (!this._connection) {
-      throw new Error('⛔️ Connection is not established, cannot disconnect!');
+      throw new Error('Connection is not established, cannot disconnect!');
     }
 
     return new Promise<void>((resolve, reject) => {
       this._connection.end((err: any | null) => {
         if (err) {
-          return reject(new Error(`⛔️ Disconnection failed: ${err.message}`));
+          return reject(new Error(`Disconnection failed: ${err.message}`));
         }
         resolve();
       });
@@ -76,13 +77,13 @@ export class MySQLDriver extends DatabaseDriver {
   /** @inheritdoc */
   public async query<T>(query: string): Promise<T> {
     if (!this._connection) {
-      throw new Error('⛔️ Connection is not established, cannot execute a query!');
+      throw new Error('Connection is not established, cannot execute a query!');
     }
 
     return new Promise<T>((resolve, reject) => {
       this._connection.query(query, (err: any | null, result: any) => {
         if (err) {
-          return reject(new Error(`❌ Query execution failed: ${err.message}`));
+          return reject(new Error(`Query execution failed: ${err.message}`));
         }
         resolve(result);
       });
