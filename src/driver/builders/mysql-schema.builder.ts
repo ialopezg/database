@@ -145,7 +145,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
     tableName: string,
     columnName: string,
     newColumn: ColumnMetadata,
-    skipPrimary: boolean = false
+    skipPrimary: boolean = false,
   ): Promise<void> {
     this.validateName(tableName, 'table name');
     this.validateName(columnName, 'column name');
@@ -154,7 +154,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
 
     await this.wrapQuery(
       () => this.query(queryStr),
-      `Failed to rename column '${columnName}' in '${tableName}'`
+      `Failed to rename column '${columnName}' in '${tableName}'`,
     );
   }
 
@@ -175,14 +175,14 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
       this.driver.database,
       ['COLUMN_NAME', 'COLUMN_TYPE', 'COLUMN_COMMENT', 'IS_NULLABLE', 'EXTRA', 'COLUMN_KEY'],
       'INFORMATION_SCHEMA.COLUMNS',
-      [`TABLE_NAME = ${this.escapeLiteral(tableName)}`]
+      [`TABLE_NAME = ${this.escapeLiteral(tableName)}`],
     );
 
     const result = await this.wrapQuery(
       async () => {
         return await this.query<TableColumn>(queryStr);
       },
-      `Failed to get changed columns from ${this.escapeIdentifier(tableName)}`
+      `Failed to get changed columns from ${this.escapeIdentifier(tableName)}`,
     );
 
     const dbColumnMap: Map<string, any> = new Map(result.rows.map((c) => [c.COLUMN_NAME, c]));
@@ -215,7 +215,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
     tableName: string,
     columnName: string,
     newColumn: ColumnMetadata,
-    skipPrimary: boolean = false
+    skipPrimary: boolean = false,
   ): Promise<void> {
     this.validateName(tableName, 'table name');
     this.validateName(columnName, 'column name');
@@ -242,12 +242,12 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
     tableName: string,
     indexName: string,
     columns: string[],
-    indexType?: 'UNIQUE' | 'FULLTEXT' | 'SPATIAL'
+    indexType?: 'UNIQUE' | 'FULLTEXT' | 'SPATIAL',
   ): Promise<void> {
     this.validateName(tableName, 'table name');
-    if (!columns.length) throw new Error('At least one column must be specified for indexing');
-    columns.forEach((col) => this.validateName(col, 'column name'));
+    if (columns.length === 0) throw new Error('At least one column must be specified for indexing');
 
+    columns.forEach((column) => this.validateName(column, 'column name'));
     const escapedColumns = columns.map((col) => this.escapeIdentifier(col)).join(', ');
     const name = indexName ?? `idx_${columns.join('_')}`;
     const escapedName = this.escapeIdentifier(name);
@@ -257,7 +257,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
 
     await this.wrapQuery(
       () => this.query(queryStr),
-      `Failed to create index '${name}' on table '${tableName}'`
+      `Failed to create index '${name}' on table '${tableName}'`,
     );
   }
 
@@ -303,7 +303,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
 
     await this.wrapQuery(
       () => this.query(queryStr),
-      `Failed to add unique key ${keyName} on column ${columnName}`
+      `Failed to add unique key ${keyName} on column ${columnName}`,
     );
   }
 
@@ -338,26 +338,28 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
    * @throws Error if validation fails or the query execution fails.
    */
   async addForeignKey(foreignKey: ForeignKeyMetadata): Promise<boolean> {
-    if (!foreignKey.table || !foreignKey.relatedTable) {
+    if (!foreignKey.table || !foreignKey.referencedTable) {
       throw new Error('Invalid foreign key metadata.');
     }
 
-    if (foreignKey.columnNames.length === 0 || foreignKey.relatedColumnNames.length === 0) {
+    if (foreignKey.columnNames.length === 0 || foreignKey.referencedColumnNames.length === 0) {
       throw new Error('Foreign key must have at least one column.');
     }
 
-    if (foreignKey.columnNames.length !== foreignKey.relatedColumnNames.length) {
+    if (foreignKey.columnNames.length !== foreignKey.referencedColumnNames.length) {
       throw new Error('Number of columns must match number of related columns');
     }
 
     this.validateName(foreignKey.table.name, 'table name');
-    this.validateName(foreignKey.relatedTable.name, 'related table name');
+    this.validateName(foreignKey.referencedTable.name, 'related table name');
     this.validateName(foreignKey.name, 'foreign key name');
     foreignKey.columnNames.forEach((col) => this.validateName(col, 'column name'));
-    foreignKey.relatedColumnNames.forEach((col) => this.validateName(col, 'related column name'));
+    foreignKey.referencedColumnNames.forEach((col) =>
+      this.validateName(col, 'related column name'),
+    );
 
     const columnList = foreignKey.columnNames.map((col) => this.escapeIdentifier(col)).join(', ');
-    const relatedColumnList = foreignKey.relatedColumnNames
+    const relatedColumnList = foreignKey.referencedColumnNames
       .map((col) => this.escapeIdentifier(col))
       .join(', ');
 
@@ -365,12 +367,12 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
       `ALTER TABLE ${this.escapeIdentifier(foreignKey.table.name)} ` +
       `ADD CONSTRAINT ${this.escapeIdentifier(foreignKey.name)} ` +
       `FOREIGN KEY (${columnList}) ` +
-      `REFERENCES ${this.escapeIdentifier(foreignKey.relatedTable.name)} (${relatedColumnList})`;
+      `REFERENCES ${this.escapeIdentifier(foreignKey.referencedTable.name)} (${relatedColumnList})`;
 
     return await this.wrapQuery(async () => {
       const result = await this.query(queryStr);
       return !!result;
-    }, `Failed to add foreign key ${foreignKey.name} from ${foreignKey.table.name} to ${foreignKey.relatedTable.name}`);
+    }, `Failed to add foreign key ${foreignKey.name} from ${foreignKey.table.name} to ${foreignKey.referencedTable.name}`);
   }
 
   /**
@@ -442,7 +444,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
             isPrimary: row.Key === 'PRI',
             isUnique: row.Key === 'UNI',
             isAutoIncrement: row.Extra?.includes('auto_increment') ?? false,
-          }) satisfies ColumnIntrospection
+          }) satisfies ColumnIntrospection,
       );
     }, `Failed to retrieve columns for table '${tableName}'`);
   }
@@ -462,7 +464,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
       this.driver.database,
       ['CONSTRAINT_NAME', 'COLUMN_NAME', 'REFERENCED_TABLE_NAME', 'REFERENCED_COLUMN_NAME'],
       'INFORMATION_SCHEMA.KEY_COLUMN_USAGE',
-      [`TABLE_NAME = '${tableName}'`, 'REFERENCED_TABLE_NAME IS NOT NULL']
+      [`TABLE_NAME = '${tableName}'`, 'REFERENCED_TABLE_NAME IS NOT NULL'],
     );
 
     type ForeignConstraintRow = {
@@ -534,7 +536,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
         `tc.CONSTRAINT_TYPE = 'UNIQUE'`,
         `tc.TABLE_NAME = '${tableName}'`,
         `tc.CONSTRAINT_SCHEMA = '${schema}'`,
-      ]
+      ],
     );
 
     type UniqueConstraintRow = { CONSTRAINT_NAME: string; COLUMN_NAME: string };
@@ -565,7 +567,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
       schema,
       ['CONSTRAINT_NAME'],
       'information_schema.TABLE_CONSTRAINTS',
-      [`CONSTRAINT_TYPE = 'UNIQUE'`, `TABLE_NAME = '${tableName}'`, `TABLE_SCHEMA = '${schema}'`]
+      [`CONSTRAINT_TYPE = 'UNIQUE'`, `TABLE_NAME = '${tableName}'`, `TABLE_SCHEMA = '${schema}'`],
     );
 
     return await this.wrapQuery(async () => {
@@ -607,7 +609,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
 
     return await this.wrapQuery(async () => {
       const result = await this.query<{ 'Create Table': string }>(
-        `SHOW CREATE TABLE ${this.escapeIdentifier(tableName)}`
+        `SHOW CREATE TABLE ${this.escapeIdentifier(tableName)}`,
       );
 
       return result.rows[0]['Create Table'];
@@ -625,7 +627,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
    */
   async getColumnDefinition(
     tableName: string,
-    columnName: string
+    columnName: string,
   ): Promise<TableColumn | undefined> {
     this.validateName(tableName, 'table name');
     this.validateName(columnName, 'column name');
@@ -657,7 +659,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
       this.driver.database,
       ['CONSTRAINT_NAME'],
       'INFORMATION_SCHEMA.TABLE_CONSTRAINTS',
-      [`TABLE_NAME = ${this.escapeLiteral(tableName)}`, `CONSTRAINT_TYPE = 'PRIMARY KEY'`]
+      [`TABLE_NAME = ${this.escapeLiteral(tableName)}`, `CONSTRAINT_TYPE = 'PRIMARY KEY'`],
     );
 
     return await this.wrapQuery(async () => {
@@ -737,7 +739,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
 
     // Name and type
     parts.push(
-      `${this.escapeIdentifier(column.name)} ${this.normalizeType(column.type, column.length)}`
+      `${this.escapeIdentifier(column.name)} ${this.normalizeType(column.type, column.length)}`,
     );
 
     // NULL / NOT NULL
@@ -800,7 +802,7 @@ export class MySQLSchemaBuilder extends BaseSchemaBuilder {
     schema: string,
     columns: string[] = ['*'],
     from: string,
-    conditions?: string[]
+    conditions?: string[],
   ): string {
     this.validateName(schema, 'schema name');
 

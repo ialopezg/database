@@ -242,9 +242,21 @@ describe('MySQLSchemaBuilder', () => {
         const result = await schemaBuilder.dropColumn('users', 'age');
 
         expect(result).toBe(true);
-        expect(mockDriver.query.mock.calls[0][0]).toContain('SELECT VERSION() AS version');
-        expect(mockDriver.query.mock.calls[1][0]).toContain('ALTER TABLE');
+        expect(mockDriver.query).toHaveBeenNthCalledWith(1, 'SELECT VERSION() AS version');
+        expect(mockDriver.query.mock.calls[1][0]).toContain('DROP COLUMN `age`');
       });
+
+      it('should drop a column without IF EXISTS for MySQL newest versions', async () => {
+        mockDriver.query.mockResolvedValueOnce([{ version: '5.7.0' }]);
+        mockDriver.query.mockResolvedValueOnce({ affectedRows: 1 });
+
+        const result = await schemaBuilder.dropColumn('users', 'old_column');
+
+        expect(result).toBe(true);
+        expect(mockDriver.query).toHaveBeenNthCalledWith(1, 'SELECT VERSION() AS version');
+        expect(mockDriver.query.mock.calls[1][0]).toMatch(/DROP COLUMN IF EXISTS `old_column`/);
+      });
+
 
       it('should throw a DatabaseQueryError if query fails', async () => {
         mockDriver.query.mockRejectedValue(new DatabaseQueryError('Query failed'));
@@ -586,9 +598,9 @@ describe('MySQLSchemaBuilder', () => {
       const validForeignKey = {
         name: 'fk_user_id',
         table: { name: 'orders' },
-        relatedTable: { name: 'users' },
+        referencedTable: { name: 'users' },
         columnNames: ['user_id'],
-        relatedColumnNames: ['id'],
+        referencedColumnNames: ['id'],
       } as ForeignKeyMetadata;
 
       it('should add a foreign key successfully', async () => {
@@ -613,8 +625,8 @@ describe('MySQLSchemaBuilder', () => {
       it('should throw if column and related column counts do not match', async () => {
         const badFK = {
           ...validForeignKey,
-          relatedColumnNames: ['id', 'name'],
-        } as unknown as ForeignKeyMetadata;
+          referencedColumnNames: ['id', 'name'],
+        } as ForeignKeyMetadata;
 
         await expect(schemaBuilder.addForeignKey(badFK)).rejects.toThrow(
           'Number of columns must match number of related columns',
@@ -625,10 +637,10 @@ describe('MySQLSchemaBuilder', () => {
         const badFK = {
           name: '',
           table: { name: '' },
-          relatedTable: { name: '' },
+          referencedTable: { name: '' },
           columnNames: [''],
-          relatedColumnNames: [''],
-        };
+          referencedColumnNames: [''],
+        } as ForeignKeyMetadata;
 
         await expect(schemaBuilder.addForeignKey(badFK as any)).rejects.toThrow('table name must not be empty or invalid.');
       });
